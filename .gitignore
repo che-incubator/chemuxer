@@ -1,0 +1,14 @@
+node_modules/
+dist/
+config/
+
+shared/*.js
+shared/*.js.map
+shared/*.d.ts
+shared/*.d.ts.map
+
+.claude/
+.remember/
+.superpowers/
+.playwright-mcp/
+docs/superpowers/

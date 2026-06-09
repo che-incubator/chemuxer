@@ -1,0 +1,48 @@
+{
+  "name": "chemuxer",
+  "version": "0.1.0",
+  "description": "Web-based terminal multiplexer with split panes, tabs, and session persistence",
+  "scripts": {
+    "dev": "concurrently -n server,client \"tsx watch server/src/main.ts\" \"vite --config client/vite.config.ts\"",
+    "build:server": "tsc -p server/tsconfig.json",
+    "build:client": "vite build --config client/vite.config.ts",
+    "build": "npm run build:server && npm run build:client",
+    "start": "node dist/server/main.js",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "keywords": ["terminal", "multiplexer", "xterm", "websocket", "split-panes"],
+  "license": "EPL-2.0",
+  "dependencies": {
+    "@monaco-editor/react": "^4.7.0",
+    "@xterm/addon-attach": "^0.13.0-beta.285",
+    "@xterm/addon-fit": "^0.12.0-beta.285",
+    "@xterm/addon-serialize": "^0.15.0-beta.285",
+    "@xterm/headless": "^6.1.0-beta.285",
+    "@xterm/xterm": "^6.1.0-beta.285",
+    "cmdk": "^1.1.1",
+    "express": "^5.2.1",
+    "node-pty": "^1.1.0",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "react-resizable-panels": "^4.11.2",
+    "ws": "^8.21.0"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@types/express": "^5.0.6",
+    "@types/node": "^25.9.2",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@types/ws": "^8.18.1",
+    "@vitejs/plugin-react": "^6.0.2",
+    "canvas": "^3.2.3",
+    "concurrently": "^10.0.3",
+    "jsdom": "^29.1.1",
+    "tsx": "^4.22.4",
+    "typescript": "^6.0.3",
+    "vite": "^8.0.16",
+    "vitest": "^4.1.8"
+  }
+}

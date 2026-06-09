@@ -1,0 +1,59 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Chemuxer Settings",
+  "type": "object",
+  "properties": {
+    "terminal": {
+      "type": "object",
+      "description": "Terminal appearance settings",
+      "properties": {
+        "fontFamily": {
+          "type": "string",
+          "description": "CSS font-family string for the terminal",
+          "default": "'JetBrains Mono', 'Fira Code', 'Cascadia Code', Menlo, monospace"
+        },
+        "fontSize": {
+          "type": "number",
+          "description": "Terminal font size in pixels",
+          "minimum": 8,
+          "maximum": 32,
+          "default": 14
+        },
+        "theme": {
+          "type": "string",
+          "description": "Terminal color theme",
+          "enum": ["catppuccin-mocha", "catppuccin-latte"],
+          "default": "catppuccin-mocha"
+        }
+      },
+      "additionalProperties": false
+    },
+    "shell": {
+      "type": "object",
+      "description": "Shell settings",
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Path to the shell binary. Empty string uses $SHELL.",
+          "default": ""
+        }
+      },
+      "additionalProperties": false
+    },
+    "scrollback": {
+      "type": "object",
+      "description": "Scrollback buffer settings",
+      "properties": {
+        "lines": {
+          "type": "number",
+          "description": "Number of scrollback lines to retain",
+          "minimum": 100,
+          "maximum": 50000,
+          "default": 5000
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
