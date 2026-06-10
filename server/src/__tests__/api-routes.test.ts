@@ -22,10 +22,10 @@ describe('API Routes', { timeout: 30000 }, () => {
   let manager: SessionManager;
   let feedCollector: FeedCollector;
   let baseUrl: string;
-  const broadcasts: object[] = [];
+  let broadcasts: object[];
 
   beforeEach(async () => {
-    broadcasts.length = 0;
+    broadcasts = [];
     manager = new SessionManager(mockSettingsManager());
     feedCollector = new FeedCollector(manager, { intervalMs: 60000, maxEntries: 10 });
     const broadcastControl = (data: object) => { broadcasts.push(data); };
@@ -43,6 +43,7 @@ describe('API Routes', { timeout: 30000 }, () => {
   afterEach(async () => {
     feedCollector.stop();
     manager.closeAll();
+    await new Promise(r => setTimeout(r, 100));
     await new Promise<void>(resolve => {
       server.close(() => resolve());
       setTimeout(resolve, 1000);
