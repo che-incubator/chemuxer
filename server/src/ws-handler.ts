@@ -8,7 +8,7 @@ export function setupWebSocketServer(
   server: http.Server,
   manager: SessionManager,
   settingsManager: SettingsManager
-): void {
+): { broadcastControl: (data: object) => void } {
   const wss = new WebSocketServer({ noServer: true });
   const controlClients = new Set<WebSocket>();
 
@@ -130,4 +130,6 @@ export function setupWebSocketServer(
       disposeDataListener();
     });
   }
+
+  return { broadcastControl };
 }
