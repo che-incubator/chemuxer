@@ -19,28 +19,21 @@ describe('Session', () => {
   it('captures PTY output in headless terminal state', async () => {
     session = new Session('/bin/zsh');
 
-    // Wait for shell to initialize
-    await new Promise(resolve => setTimeout(resolve, 300));
-
-    // Send a command to generate visible output
-    session.write('echo "test output"\r');
-
-    // Wait for command output
     const output = await new Promise<string>((resolve) => {
       let buf = '';
-      session!.onData((data) => {
+      const dispose = session!.onData((data) => {
         buf += data;
-        if (buf.includes('test output') || buf.length > 50) {
+        if (buf.includes('test output')) {
+          dispose();
           resolve(buf);
         }
       });
-      // Timeout in case command doesn't echo
-      setTimeout(() => resolve(buf), 500);
+      session!.write('echo "test output"\r');
+      setTimeout(() => { dispose(); resolve(buf); }, 5000);
     });
 
     expect(output.length).toBeGreaterThan(0);
 
-    // Wait for headless terminal to process writes
     await session.waitForPendingWrites();
 
     const state = session.getState();

@@ -86,9 +86,13 @@ describe('SessionManager', () => {
   });
 
   it('uses $SHELL when it exists and is executable', () => {
-    const shell = process.env.SHELL;
-    if (!shell) return;
-    expect(resolveShell('')).toBe(shell);
+    const original = process.env.SHELL;
+    try {
+      process.env.SHELL = '/bin/sh';
+      expect(resolveShell('')).toBe('/bin/sh');
+    } finally {
+      process.env.SHELL = original;
+    }
   });
 
   it('new sessions use updated settings after change', () => {
