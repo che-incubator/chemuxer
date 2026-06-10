@@ -7,5 +7,6 @@
     "rootDir": "..",
     "ignoreDeprecations": "6.0"
   },
-  "include": ["src/**/*", "../shared/**/*"]
+  "include": ["src/**/*", "../shared/**/*"],
+  "exclude": ["src/__tests__/**/*"]
 }
