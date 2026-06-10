@@ -4,6 +4,8 @@ import express from 'express';
 import { SessionManager } from './session-manager.js';
 import { SettingsManager } from './settings-manager.js';
 import { setupWebSocketServer } from './ws-handler.js';
+import { FeedCollector } from './feed-collector.js';
+import { createApiRouter } from './api-routes.js';
 
 const PORT = parseInt(process.env.PORT || '7681', 10);
 const HOST = process.env.HOST || '127.0.0.1';
@@ -15,6 +17,13 @@ const settingsManager = new SettingsManager(configPath);
 const app = express();
 const server = http.createServer(app);
 const manager = new SessionManager(settingsManager);
+
+const { broadcastControl } = setupWebSocketServer(server, manager, settingsManager);
+
+const feedCollector = new FeedCollector(manager, {
+  intervalMs: parseInt(process.env.FEED_INTERVAL_MS || '60000', 10),
+  maxEntries: parseInt(process.env.FEED_MAX_ENTRIES || '60', 10),
+});
 
 app.use(express.json());
 app.use(express.static(STATIC_DIR));
@@ -38,12 +47,12 @@ app.get('/api/settings/schema', (_req, res) => {
   res.type('application/json').send(settingsManager.getSchemaString());
 });
 
-// SPA fallback
+app.use(createApiRouter(manager, feedCollector, broadcastControl));
+
+// SPA fallback — must come after API routes and agents.md
 app.get(/^(?!\/api\/)/, (_req, res) => {
   res.sendFile(path.join(STATIC_DIR, 'index.html'));
 });
-
-setupWebSocketServer(server, manager, settingsManager);
 
 // Create a default session so the user sees a terminal immediately
 const initialSession = manager.createSession();
@@ -53,9 +62,11 @@ initialSession.onExit(() => {
 
 server.listen(PORT, HOST, () => {
   console.log(`chemuxer listening on http://${HOST}:${PORT}`);
+  feedCollector.start();
 });
 
 process.on('SIGTERM', () => {
+  feedCollector.stop();
   settingsManager.dispose();
   manager.closeAll();
   server.close(() => process.exit(0));
