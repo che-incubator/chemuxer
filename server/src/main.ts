@@ -7,7 +7,7 @@ import { setupWebSocketServer } from './ws-handler.js';
 
 const PORT = parseInt(process.env.PORT || '7681', 10);
 const HOST = process.env.HOST || '127.0.0.1';
-const STATIC_DIR = path.resolve(__dirname, '../client');
+const STATIC_DIR = process.env.STATIC_DIR || path.resolve(__dirname, '../client');
 
 const configPath = path.join(process.cwd(), 'config', 'settings.json');
 const settingsManager = new SettingsManager(configPath);
