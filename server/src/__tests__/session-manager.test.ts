@@ -1,5 +1,5 @@
-import { describe, it, expect, afterEach } from 'vitest';
-import { SessionManager } from '../session-manager.js';
+import { describe, it, expect, afterEach, vi } from 'vitest';
+import { SessionManager, resolveShell } from '../session-manager.js';
 import { DEFAULT_SETTINGS, type Settings } from '../../../shared/settings.js';
 import type { SettingsManager } from '../settings-manager.js';
 
@@ -73,6 +73,22 @@ describe('SessionManager', () => {
     manager = new SessionManager(mockSettingsManager(settings));
     const session = manager.createSession();
     expect(session.shell).not.toBe('/tmp/evil-script');
+  });
+
+  it('falls back to /bin/sh when $SHELL points to non-existent path', () => {
+    const original = process.env.SHELL;
+    try {
+      process.env.SHELL = '/nonexistent/shell';
+      expect(resolveShell('')).toBe('/bin/sh');
+    } finally {
+      process.env.SHELL = original;
+    }
+  });
+
+  it('uses $SHELL when it exists and is executable', () => {
+    const shell = process.env.SHELL;
+    if (!shell) return;
+    expect(resolveShell('')).toBe(shell);
   });
 
   it('new sessions use updated settings after change', () => {

@@ -12,11 +12,28 @@ function getValidShells(): Set<string> {
   }
 }
 
-function resolveShell(requested: string): string {
-  const fallback = process.env.SHELL || '/bin/sh';
-  if (!requested) return fallback;
+function isExecutable(shellPath: string): boolean {
+  try {
+    fs.accessSync(shellPath, fs.constants.X_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function resolveShell(requested: string): string {
+  const candidates: string[] = [];
+  if (requested) candidates.push(requested);
+  if (process.env.SHELL) candidates.push(process.env.SHELL);
+  candidates.push('/bin/sh');
+
   const valid = getValidShells();
-  return valid.has(requested) ? requested : fallback;
+  for (const shell of candidates) {
+    if (valid.has(shell) && isExecutable(shell)) return shell;
+  }
+  if (isExecutable('/bin/sh')) return '/bin/sh';
+
+  throw new Error(`No usable shell found. Tried: ${candidates.join(', ')}`);
 }
 
 export class SessionManager {
