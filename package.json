@@ -11,7 +11,9 @@
     "build:all": "npm run build:bundle && npm run build:client",
     "start": "node dist/server/main.js",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "docker:build": "docker build -t chemuxer .",
+    "docker:run": "docker run --rm -p 7681:7681 chemuxer"
   },
   "keywords": [
     "terminal",
