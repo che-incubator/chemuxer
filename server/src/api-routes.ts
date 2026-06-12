@@ -65,7 +65,7 @@ export function createApiRouter(
   const router = Router();
 
   // --- agents.md ---
-  router.get('/agents.md', (_req, res) => {
+  router.get(['/agents.md', '/.well-known/agents.md'], (_req, res) => {
     res.type('text/markdown').send(AGENTS_MD);
   });
 

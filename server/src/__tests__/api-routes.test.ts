@@ -60,6 +60,17 @@ describe('API Routes', { timeout: 30000 }, () => {
     expect(body).toContain('/api/sessions');
   });
 
+  it('GET /.well-known/agents.md returns same content as /agents.md', async () => {
+    const [res, wellKnownRes] = await Promise.all([
+      fetch(`${baseUrl}/agents.md`),
+      fetch(`${baseUrl}/.well-known/agents.md`),
+    ]);
+    expect(wellKnownRes.status).toBe(200);
+    expect(wellKnownRes.headers.get('content-type')).toContain('text/markdown');
+    const [body, wellKnownBody] = await Promise.all([res.text(), wellKnownRes.text()]);
+    expect(wellKnownBody).toBe(body);
+  });
+
   // --- Session CRUD ---
   it('GET /api/sessions returns empty array initially', async () => {
     const res = await fetch(`${baseUrl}/api/sessions`);
