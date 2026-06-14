@@ -45,4 +45,9 @@ describe('stripAnsi', () => {
   it('strips alternate screen buffer sequences', () => {
     expect(stripAnsi('\x1b[?1049hcontent\x1b[?1049l')).toBe('content');
   });
+
+  it('strips multi-byte ESC sequences like ESC(B (G0 charset select)', () => {
+    expect(stripAnsi('\x1b(B')).toBe('');
+    expect(stripAnsi('\x1b[0m\x1b(Bhello')).toBe('hello');
+  });
 });

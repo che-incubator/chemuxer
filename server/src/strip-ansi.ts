@@ -1,4 +1,4 @@
-const ANSI_PATTERN = /\x1b\[[0-9;?]*[ -/]*[a-zA-Z@]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)|\x1b[^[\]]/g;
+const ANSI_PATTERN = /\x1b\[[0-9;?]*[ -/]*[a-zA-Z@]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)|\x1b[ -/]+[0-~]|\x1b[^[\] -/]/g;
 
 export function stripAnsi(text: string): string {
   return text.replace(ANSI_PATTERN, '');
