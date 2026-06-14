@@ -110,10 +110,14 @@ export class Session {
   }
 
   resize(cols: number, rows: number): void {
-    if (!this._isClosed) {
-      this.ptyProcess.resize(cols, rows);
-      this.headless.resize(cols, rows);
-    }
+    if (this._isClosed) return;
+    if (!Number.isFinite(cols) || !Number.isFinite(rows)) return;
+
+    cols = Math.max(2, Math.min(500, Math.floor(cols)));
+    rows = Math.max(1, Math.min(200, Math.floor(rows)));
+
+    this.ptyProcess.resize(cols, rows);
+    this.headless.resize(cols, rows);
   }
 
   onData(cb: DataCallback): () => void {
