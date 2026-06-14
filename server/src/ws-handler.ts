@@ -156,6 +156,12 @@ export function setupWebSocketServer(
     };
     const disposeDataListener = session.onData(onData);
 
+    // Close IO WebSocket when PTY process exits
+    session.onExit(() => {
+      disposeDataListener();
+      ws.close(4000, 'session-exited');
+    });
+
     // Forward client input to PTY
     ws.on('message', (raw, isBinary) => {
       if (isBinary) {
