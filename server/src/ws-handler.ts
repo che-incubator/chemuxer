@@ -19,6 +19,29 @@ export function setupWebSocketServer(
   });
 
   server.on('upgrade', (req, socket, head) => {
+    // Origin validation: block cross-origin browser requests (CSWSH protection)
+    const origin = req.headers.origin;
+    if (origin) {
+      const host = req.headers.host || '';
+      let originHost: string;
+      try {
+        originHost = new URL(origin).host;
+      } catch {
+        socket.write('HTTP/1.1 403 Forbidden\r\n\r\n');
+        socket.destroy();
+        return;
+      }
+      const isLocalhost = (h: string) => {
+        const hostname = h.split(':')[0];
+        return hostname === 'localhost' || hostname === '127.0.0.1';
+      };
+      if (originHost !== host && !isLocalhost(originHost)) {
+        socket.write('HTTP/1.1 403 Forbidden\r\n\r\n');
+        socket.destroy();
+        return;
+      }
+    }
+
     if (activeConnections >= MAX_CONNECTIONS) {
       socket.write('HTTP/1.1 503 Service Unavailable\r\n\r\n');
       socket.destroy();
