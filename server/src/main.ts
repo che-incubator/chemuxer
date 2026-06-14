@@ -81,9 +81,11 @@ server.listen(PORT, HOST, () => {
   feedCollector.start();
 });
 
-process.on('SIGTERM', () => {
+function shutdown() {
   feedCollector.stop();
   settingsManager.dispose();
   manager.closeAll();
   server.close(() => process.exit(0));
-});
+}
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);
