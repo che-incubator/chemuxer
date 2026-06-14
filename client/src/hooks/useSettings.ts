@@ -8,7 +8,7 @@ export interface SettingsState {
 }
 
 function basePath(): string {
-  return window.location.pathname.replace(/\/+$/, '');
+  return new URL('.', document.baseURI).pathname.replace(/\/+$/, '');
 }
 
 export function useSettings(): SettingsState {
