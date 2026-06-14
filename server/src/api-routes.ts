@@ -8,6 +8,19 @@ const AGENTS_MD = `# Chemuxer — Agent Instructions
 Chemuxer is a web-based terminal multiplexer running inside this workspace.
 You can manage terminal sessions and read their output via the REST API below.
 
+## Access
+
+If you are running inside the same pod or cluster, call the API directly
+(e.g. http://localhost:7681/api/sessions).
+
+If you are running outside the cluster, use kubectl port-forward to tunnel
+into the workspace pod:
+
+  kubectl port-forward pod/<workspace-pod> 7681:7681
+
+Then call the API at http://localhost:7681. No authentication token is needed
+over the tunnel — kubectl handles authorization via your kubeconfig.
+
 ## Sessions
 
 List all sessions:
