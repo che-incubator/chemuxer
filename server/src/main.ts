@@ -71,8 +71,9 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
 
 // Create a default session so the user sees a terminal immediately
 const initialSession = manager.createSession();
-initialSession.onExit(() => {
+initialSession.onExit((exitCode) => {
   manager.closeSession(initialSession.id);
+  broadcastControl({ type: 'session-closed', sessionId: initialSession.id, exitCode });
 });
 
 server.listen(PORT, HOST, () => {
