@@ -15,14 +15,17 @@ export interface FeedResponse {
 export interface FeedCollectorOptions {
   intervalMs?: number;
   maxEntries?: number;
+  staleMs?: number;
 }
 
 export class FeedCollector {
   private entries = new Map<string, FeedEntry[]>();
   private lastSnapshot = new Map<string, string>();
+  private lastSeen = new Map<string, number>();
   private timer: ReturnType<typeof setInterval> | null = null;
   private readonly intervalMs: number;
   private readonly maxEntries: number;
+  private readonly staleMs: number;
   private lastTimestamp: string = new Date(0).toISOString();
 
   constructor(
@@ -31,6 +34,7 @@ export class FeedCollector {
   ) {
     this.intervalMs = options.intervalMs ?? 60_000;
     this.maxEntries = options.maxEntries ?? 60;
+    this.staleMs = options.staleMs ?? 5 * 60_000;
   }
 
   start(): void {
@@ -47,6 +51,11 @@ export class FeedCollector {
   tick(): void {
     const sessions = this.manager.listSessions();
     const activeIds = new Set(sessions.map(s => s.id));
+
+    const now = Date.now();
+    for (const id of activeIds) {
+      this.lastSeen.set(id, now);
+    }
 
     for (const info of sessions) {
       const session = this.manager.getSession(info.id);
@@ -82,6 +91,16 @@ export class FeedCollector {
     for (const id of this.lastSnapshot.keys()) {
       if (!activeIds.has(id)) {
         this.lastSnapshot.delete(id);
+      }
+    }
+
+    for (const id of this.entries.keys()) {
+      if (!activeIds.has(id)) {
+        const seen = this.lastSeen.get(id) ?? 0;
+        if (now - seen >= this.staleMs) {
+          this.entries.delete(id);
+          this.lastSeen.delete(id);
+        }
       }
     }
   }
