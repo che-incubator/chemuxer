@@ -88,7 +88,13 @@ export function createApiRouter(
   });
 
   router.post('/api/sessions', (_req, res) => {
-    const session = manager.createSession();
+    let session;
+    try {
+      session = manager.createSession();
+    } catch {
+      res.status(429).json({ error: 'Maximum session limit reached' });
+      return;
+    }
     session.onExit((exitCode) => {
       manager.closeSession(session.id);
       broadcastControl({ type: 'session-closed', sessionId: session.id, exitCode });

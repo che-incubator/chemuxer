@@ -85,7 +85,13 @@ export function setupWebSocketServer(
       }
 
       if (msg.type === 'create') {
-        const session = mgr.createSession();
+        let session;
+        try {
+          session = mgr.createSession();
+        } catch {
+          ws.send(JSON.stringify({ type: 'error', error: 'Maximum session limit reached' }));
+          return;
+        }
         session.onExit((exitCode) => {
           mgr.closeSession(session.id);
           broadcastControl({ type: 'session-closed', sessionId: session.id, exitCode });
