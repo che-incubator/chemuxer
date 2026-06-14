@@ -25,6 +25,15 @@ const feedCollector = new FeedCollector(manager, {
   maxEntries: parseInt(process.env.FEED_MAX_ENTRIES || '60', 10),
 });
 
+// Security headers — no new dependencies, no CSP (SPA inline scripts), no HSTS (gateway handles TLS)
+app.use((_req, res, next) => {
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('X-XSS-Protection', '0');
+  next();
+});
+
 app.use(express.json());
 app.use(express.static(STATIC_DIR));
 
