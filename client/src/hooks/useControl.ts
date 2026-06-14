@@ -24,7 +24,13 @@ export function useControl(url: string, options?: ControlOptions): ControlState 
   onSettingsChangedRef.current = options?.onSettingsChanged;
 
   const handleMessage = useCallback((event: MessageEvent) => {
-    const msg: ServerControlMessage = JSON.parse(event.data);
+    let msg: ServerControlMessage;
+    try {
+      msg = JSON.parse(event.data);
+    } catch {
+      console.warn('[useControl] malformed message:', event.data);
+      return;
+    }
 
     if (msg.type === 'sessions') {
       setSessions(msg.sessions);
