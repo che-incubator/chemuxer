@@ -17,7 +17,8 @@ export class SettingsManager {
     const schemaPath = path.resolve(__dirname, 'settings-schema.json');
     try {
       this.schemaString = fs.readFileSync(schemaPath, 'utf-8');
-    } catch {
+    } catch (e) {
+      console.warn('[SettingsManager] Failed to read settings schema:', e);
       this.schemaString = '{}';
     }
 
@@ -40,7 +41,7 @@ export class SettingsManager {
         this.notifyChange();
       });
     } catch {
-      // fs.watch not available — skip
+      console.warn('[SettingsManager] fs.watch not available, settings hot-reload disabled');
     }
   }
 
@@ -49,7 +50,8 @@ export class SettingsManager {
       const raw = fs.readFileSync(this.configPath, 'utf-8');
       const parsed = JSON.parse(raw);
       return mergeWithDefaults(parsed);
-    } catch {
+    } catch (e) {
+      console.warn('[SettingsManager] Failed to read settings, using defaults:', e);
       return { ...DEFAULT_SETTINGS };
     }
   }
