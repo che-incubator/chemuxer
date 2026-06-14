@@ -47,8 +47,13 @@ app.put('/api/settings', (req, res) => {
   try {
     const updated = settingsManager.writeSettingsRaw(JSON.stringify(req.body));
     res.json(updated);
-  } catch (err: any) {
-    res.status(400).json({ error: 'Invalid settings' });
+  } catch (err) {
+    console.error('[settings] PUT failed:', err);
+    if (err instanceof SyntaxError) {
+      res.status(400).json({ error: 'Invalid settings' });
+    } else {
+      res.status(500).json({ error: 'Internal server error' });
+    }
   }
 });
 
