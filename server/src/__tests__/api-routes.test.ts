@@ -125,7 +125,7 @@ describe('API Routes', { timeout: 30000 }, () => {
   it('DELETE /api/sessions/:id broadcasts session-closed', async () => {
     const createRes = await fetch(`${baseUrl}/api/sessions`, { method: 'POST' });
     const { id } = await createRes.json();
-    broadcasts.length = 0;
+    broadcasts = [];
     await fetch(`${baseUrl}/api/sessions/${id}`, { method: 'DELETE' });
     expect(broadcasts).toHaveLength(1);
     expect((broadcasts[0] as any).type).toBe('session-closed');
@@ -154,7 +154,7 @@ describe('API Routes', { timeout: 30000 }, () => {
   it('PATCH /api/sessions/:id broadcasts session-renamed', async () => {
     const createRes = await fetch(`${baseUrl}/api/sessions`, { method: 'POST' });
     const { id } = await createRes.json();
-    broadcasts.length = 0;
+    broadcasts = [];
     await fetch(`${baseUrl}/api/sessions/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
