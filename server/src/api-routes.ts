@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import type { SessionManager } from './session-manager.js';
+import { SessionLimitError } from './session-manager.js';
 import type { FeedCollector } from './feed-collector.js';
 import { stripAnsi } from './strip-ansi.js';
 
@@ -87,12 +88,16 @@ export function createApiRouter(
     res.json(manager.listSessions());
   });
 
-  router.post('/api/sessions', (_req, res) => {
+  router.post('/api/sessions', (_req, res, next) => {
     let session;
     try {
       session = manager.createSession();
-    } catch {
-      res.status(429).json({ error: 'Maximum session limit reached' });
+    } catch (err) {
+      if (err instanceof SessionLimitError) {
+        res.status(429).json({ error: 'Maximum session limit reached' });
+        return;
+      }
+      next(err);
       return;
     }
     session.onExit((exitCode) => {

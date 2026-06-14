@@ -38,6 +38,13 @@ export function resolveShell(requested: string): string {
 
 const MAX_SESSIONS = 20;
 
+export class SessionLimitError extends Error {
+  constructor() {
+    super('Maximum session limit reached');
+    this.name = 'SessionLimitError';
+  }
+}
+
 export class SessionManager {
   private sessions = new Map<string, Session>();
   private shell: string;
@@ -56,7 +63,7 @@ export class SessionManager {
 
   createSession(): Session {
     if (this.sessions.size >= MAX_SESSIONS) {
-      throw new Error('Maximum session limit reached');
+      throw new SessionLimitError();
     }
     const session = new Session(this.shell, { scrollbackLines: this.scrollbackLines });
     this.sessions.set(session.id, session);

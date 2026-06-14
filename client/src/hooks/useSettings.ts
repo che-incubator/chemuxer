@@ -7,7 +7,7 @@ export interface SettingsState {
   applySettingsChanged: (settings: Settings) => void;
 }
 
-function basePath(): string {
+export function basePath(): string {
   return new URL('.', document.baseURI).pathname.replace(/\/+$/, '');
 }
 

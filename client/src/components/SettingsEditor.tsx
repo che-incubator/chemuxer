@@ -2,6 +2,7 @@ import { useRef, useEffect } from 'react';
 import Editor, { type OnMount, type Monaco } from '@monaco-editor/react';
 import type { editor } from 'monaco-editor';
 import type { Settings } from '../../../shared/settings.js';
+import { basePath } from '../hooks/useSettings.js';
 
 interface SettingsEditorProps {
   settings: Settings;
@@ -17,7 +18,7 @@ export function SettingsEditor({ settings, onSave, visible }: SettingsEditorProp
   const handleMount: OnMount = (editor, monaco) => {
     editorRef.current = editor;
 
-    fetch('/api/settings/schema')
+    fetch(`${basePath()}/api/settings/schema`)
       .then((res) => res.json())
       .then((schema) => {
         monaco.languages.json.jsonDefaults.setDiagnosticsOptions({

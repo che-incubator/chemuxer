@@ -1,6 +1,6 @@
 import http from 'http';
 import { WebSocketServer, WebSocket } from 'ws';
-import { SessionManager } from './session-manager.js';
+import { SessionManager, SessionLimitError } from './session-manager.js';
 import { SettingsManager } from './settings-manager.js';
 import type { ClientControlMessage, ClientIOMessage } from '../../shared/protocol.js';
 
@@ -111,8 +111,12 @@ export function setupWebSocketServer(
         let session;
         try {
           session = mgr.createSession();
-        } catch {
-          ws.send(JSON.stringify({ type: 'error', error: 'Maximum session limit reached' }));
+        } catch (err) {
+          if (err instanceof SessionLimitError) {
+            ws.send(JSON.stringify({ type: 'error', error: 'Maximum session limit reached' }));
+          } else {
+            ws.send(JSON.stringify({ type: 'error', error: 'Unable to create session' }));
+          }
           return;
         }
         session.onExit((exitCode) => {
