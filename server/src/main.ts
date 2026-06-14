@@ -20,9 +20,14 @@ const manager = new SessionManager(settingsManager);
 
 const { broadcastControl } = setupWebSocketServer(server, manager, settingsManager);
 
+const parsedInterval = parseInt(process.env.FEED_INTERVAL_MS || '60000', 10);
+const feedIntervalMs = Number.isFinite(parsedInterval) && parsedInterval > 0 ? parsedInterval : 60000;
+const parsedMaxEntries = parseInt(process.env.FEED_MAX_ENTRIES || '60', 10);
+const feedMaxEntries = Number.isFinite(parsedMaxEntries) && parsedMaxEntries > 0 ? parsedMaxEntries : 60;
+
 const feedCollector = new FeedCollector(manager, {
-  intervalMs: parseInt(process.env.FEED_INTERVAL_MS || '60000', 10),
-  maxEntries: parseInt(process.env.FEED_MAX_ENTRIES || '60', 10),
+  intervalMs: feedIntervalMs,
+  maxEntries: feedMaxEntries,
 });
 
 // Security headers — no new dependencies, no CSP (SPA inline scripts), no HSTS (gateway handles TLS)
