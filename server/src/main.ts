@@ -25,6 +25,15 @@ const feedCollector = new FeedCollector(manager, {
   maxEntries: parseInt(process.env.FEED_MAX_ENTRIES || '60', 10),
 });
 
+// Security headers — no new dependencies, no CSP (SPA inline scripts), no HSTS (gateway handles TLS)
+app.use((_req, res, next) => {
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('X-XSS-Protection', '0');
+  next();
+});
+
 app.use(express.json());
 app.use(express.static(STATIC_DIR));
 
@@ -39,7 +48,7 @@ app.put('/api/settings', (req, res) => {
     const updated = settingsManager.writeSettingsRaw(JSON.stringify(req.body));
     res.json(updated);
   } catch (err: any) {
-    res.status(400).json({ error: err.message });
+    res.status(400).json({ error: 'Invalid settings' });
   }
 });
 
@@ -52,6 +61,12 @@ app.use(createApiRouter(manager, feedCollector, broadcastControl));
 // SPA fallback — must come after API routes and agents.md
 app.get(/^(?!\/api\/)/, (_req, res) => {
   res.sendFile(path.join(STATIC_DIR, 'index.html'));
+});
+
+// Global error handler — log internally, never expose details to client
+app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  console.error(err);
+  res.status(500).json({ error: 'Internal server error' });
 });
 
 // Create a default session so the user sees a terminal immediately

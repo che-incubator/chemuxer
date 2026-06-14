@@ -21,11 +21,16 @@ WORKDIR /app
 # Only install node-pty (the sole native dependency that can't be bundled)
 RUN npm init -y && npm install node-pty@1.1.0 && apk del python3 make g++
 
-# Copy bundled server and client assets
-COPY --from=build /app/dist/server/server.js dist/server/server.js
-COPY --from=build /app/dist/client dist/client
+# Create non-root user and transfer ownership
+RUN adduser -D -h /home/chemuxer chemuxer && chown -R chemuxer:chemuxer /app
 
+# Copy bundled server and client assets
+COPY --from=build --chown=chemuxer:chemuxer /app/dist/server/server.js dist/server/server.js
+COPY --from=build --chown=chemuxer:chemuxer /app/dist/client dist/client
+
+USER chemuxer
 ENV HOST=0.0.0.0
 ENV STATIC_DIR=/app/dist/client
 EXPOSE 7681
+ENV NODE_ENV=production
 CMD ["node", "dist/server/server.js"]

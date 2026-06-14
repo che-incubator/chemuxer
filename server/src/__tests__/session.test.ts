@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import { Session } from '../session.js';
 
 describe('Session', () => {
@@ -100,5 +100,59 @@ describe('Session', () => {
     session.close();
     expect(session.isClosed).toBe(true);
     session = undefined;
+  });
+
+  describe('resize validation', () => {
+    it('rejects NaN values without calling resize on PTY', () => {
+      session = new Session('/bin/zsh');
+      const spy = vi.spyOn(session['ptyProcess'], 'resize');
+      session.resize(NaN, 24);
+      session.resize(80, NaN);
+      session.resize(NaN, NaN);
+      expect(spy).not.toHaveBeenCalled();
+    });
+
+    it('rejects Infinity values without calling resize on PTY', () => {
+      session = new Session('/bin/zsh');
+      const spy = vi.spyOn(session['ptyProcess'], 'resize');
+      session.resize(Infinity, 24);
+      session.resize(80, -Infinity);
+      session.resize(Infinity, Infinity);
+      expect(spy).not.toHaveBeenCalled();
+    });
+
+    it('clamps negative and zero values to minimums (cols=2, rows=1)', () => {
+      session = new Session('/bin/zsh');
+      const spy = vi.spyOn(session['ptyProcess'], 'resize');
+      session.resize(-10, -5);
+      expect(spy).toHaveBeenCalledWith(2, 1);
+
+      spy.mockClear();
+      session.resize(0, 0);
+      expect(spy).toHaveBeenCalledWith(2, 1);
+    });
+
+    it('clamps values above maximums (cols=500, rows=200)', () => {
+      session = new Session('/bin/zsh');
+      const spy = vi.spyOn(session['ptyProcess'], 'resize');
+      session.resize(1000, 500);
+      expect(spy).toHaveBeenCalledWith(500, 200);
+    });
+
+    it('truncates float values to integers', () => {
+      session = new Session('/bin/zsh');
+      const spy = vi.spyOn(session['ptyProcess'], 'resize');
+      session.resize(80.9, 24.7);
+      expect(spy).toHaveBeenCalledWith(80, 24);
+    });
+
+    it('resize on closed session is a no-op', () => {
+      session = new Session('/bin/zsh');
+      const spy = vi.spyOn(session['ptyProcess'], 'resize');
+      session.close();
+      session.resize(80, 24);
+      expect(spy).not.toHaveBeenCalled();
+      session = undefined;
+    });
   });
 });

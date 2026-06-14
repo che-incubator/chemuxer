@@ -181,6 +181,33 @@ describe('FeedCollector', () => {
     expect(feed.entries[0].content).toBe('before close');
   });
 
+  it('evicts entries for closed sessions after staleMs expires', () => {
+    const { manager, addSession, removeSession } = createMockManager();
+    addSession('s1', 'before close');
+    collector = new FeedCollector(manager, { intervalMs: 1000, maxEntries: 10, staleMs: 0 });
+
+    collector.tick();
+    removeSession('s1');
+    collector.tick();
+
+    const feed = collector.getSessionFeed('s1');
+    expect(feed.entries).toHaveLength(0);
+  });
+
+  it('retains entries for recently closed sessions within staleMs', () => {
+    const { manager, addSession, removeSession } = createMockManager();
+    addSession('s1', 'before close');
+    collector = new FeedCollector(manager, { intervalMs: 1000, maxEntries: 10, staleMs: 60_000 });
+
+    collector.tick();
+    removeSession('s1');
+    collector.tick();
+
+    const feed = collector.getSessionFeed('s1');
+    expect(feed.entries).toHaveLength(1);
+    expect(feed.entries[0].content).toBe('before close');
+  });
+
   it('strips ANSI escape sequences from snapshots', () => {
     const { manager, addSession } = createMockManager();
     addSession('s1', '\x1b[32m$ hello\x1b[0m');

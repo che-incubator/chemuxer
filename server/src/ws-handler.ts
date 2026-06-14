@@ -1,6 +1,6 @@
 import http from 'http';
 import { WebSocketServer, WebSocket } from 'ws';
-import { SessionManager } from './session-manager.js';
+import { SessionManager, SessionLimitError } from './session-manager.js';
 import { SettingsManager } from './settings-manager.js';
 import type { ClientControlMessage, ClientIOMessage } from '../../shared/protocol.js';
 
@@ -9,7 +9,9 @@ export function setupWebSocketServer(
   manager: SessionManager,
   settingsManager: SettingsManager
 ): { broadcastControl: (data: object) => void } {
-  const wss = new WebSocketServer({ noServer: true });
+  const MAX_CONNECTIONS = 100;
+  const wss = new WebSocketServer({ noServer: true, maxPayload: 1 * 1024 * 1024 });
+  let activeConnections = 0;
   const controlClients = new Set<WebSocket>();
 
   settingsManager.onChange((settings) => {
@@ -17,11 +19,42 @@ export function setupWebSocketServer(
   });
 
   server.on('upgrade', (req, socket, head) => {
+    // Origin validation: block cross-origin browser requests (CSWSH protection)
+    const origin = req.headers.origin;
+    if (origin) {
+      const host = req.headers.host || '';
+      let originHost: string;
+      try {
+        originHost = new URL(origin).host;
+      } catch {
+        socket.write('HTTP/1.1 403 Forbidden\r\n\r\n');
+        socket.destroy();
+        return;
+      }
+      const isLocalhost = (h: string) => {
+        const hostname = h.split(':')[0];
+        return hostname === 'localhost' || hostname === '127.0.0.1';
+      };
+      if (originHost !== host && !isLocalhost(originHost)) {
+        socket.write('HTTP/1.1 403 Forbidden\r\n\r\n');
+        socket.destroy();
+        return;
+      }
+    }
+
+    if (activeConnections >= MAX_CONNECTIONS) {
+      socket.write('HTTP/1.1 503 Service Unavailable\r\n\r\n');
+      socket.destroy();
+      return;
+    }
+
     const url = new URL(req.url || '/', `http://${req.headers.host}`);
     const pathname = url.pathname;
 
     if (pathname === '/ws/control') {
       wss.handleUpgrade(req, socket, head, (ws) => {
+        activeConnections++;
+        ws.on('close', () => { activeConnections--; });
         wss.emit('connection', ws, req);
         handleControl(ws, manager, controlClients);
       });
@@ -30,12 +63,16 @@ export function setupWebSocketServer(
       const session = manager.getSession(sessionId);
       if (!session) {
         wss.handleUpgrade(req, socket, head, (ws) => {
+          activeConnections++;
+          ws.on('close', () => { activeConnections--; });
           wss.emit('connection', ws, req);
           ws.close(4404, 'Session not found');
         });
         return;
       }
       wss.handleUpgrade(req, socket, head, (ws) => {
+        activeConnections++;
+        ws.on('close', () => { activeConnections--; });
         wss.emit('connection', ws, req);
         handleIO(ws, session);
       });
@@ -71,7 +108,17 @@ export function setupWebSocketServer(
       }
 
       if (msg.type === 'create') {
-        const session = mgr.createSession();
+        let session;
+        try {
+          session = mgr.createSession();
+        } catch (err) {
+          if (err instanceof SessionLimitError) {
+            ws.send(JSON.stringify({ type: 'error', error: 'Maximum session limit reached' }));
+          } else {
+            ws.send(JSON.stringify({ type: 'error', error: 'Unable to create session' }));
+          }
+          return;
+        }
         session.onExit((exitCode) => {
           mgr.closeSession(session.id);
           broadcastControl({ type: 'session-closed', sessionId: session.id, exitCode });
