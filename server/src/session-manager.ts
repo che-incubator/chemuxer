@@ -31,6 +31,8 @@ export function resolveShell(requested: string): string {
   for (const shell of candidates) {
     if (valid.has(shell) && isExecutable(shell)) return shell;
   }
+  // Fallback: accept $SHELL if executable even without /etc/shells listing (e.g. containers)
+  if (process.env.SHELL && isExecutable(process.env.SHELL)) return process.env.SHELL;
   if (isExecutable('/bin/sh')) return '/bin/sh';
 
   throw new Error(`No usable shell found. Tried: ${candidates.join(', ')}`);
@@ -56,7 +58,11 @@ export class SessionManager {
     this.scrollbackLines = settings.scrollback.lines;
 
     settingsManager.onChange((updated) => {
-      this.shell = resolveShell(updated.shell.path);
+      try {
+        this.shell = resolveShell(updated.shell.path);
+      } catch (err) {
+        console.warn(`[SessionManager] Failed to resolve shell, keeping "${this.shell}":`, err);
+      }
       this.scrollbackLines = updated.scrollback.lines;
     });
   }
