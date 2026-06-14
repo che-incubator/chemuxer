@@ -7,13 +7,21 @@
     "build:server": "tsc -p server/tsconfig.json",
     "build:client": "vite build --config client/vite.config.ts",
     "build": "npm run build:server && npm run build:client",
+    "build:bundle": "esbuild server/src/main.ts --bundle --platform=node --target=node22 --format=cjs --outfile=dist/server/server.js --external:node-pty",
+    "build:all": "npm run build:bundle && npm run build:client",
     "start": "node dist/server/main.js",
     "test": "vitest run",
     "test:watch": "vitest",
     "docker:build": "docker build -t chemuxer .",
     "docker:run": "docker run --rm -p 7681:7681 chemuxer"
   },
-  "keywords": ["terminal", "multiplexer", "xterm", "websocket", "split-panes"],
+  "keywords": [
+    "terminal",
+    "multiplexer",
+    "xterm",
+    "websocket",
+    "split-panes"
+  ],
   "license": "EPL-2.0",
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",
@@ -41,6 +49,7 @@
     "@vitejs/plugin-react": "^6.0.2",
     "canvas": "^3.2.3",
     "concurrently": "^10.0.3",
+    "esbuild": "^0.28.0",
     "jsdom": "^29.1.1",
     "tsx": "^4.22.4",
     "typescript": "^6.0.3",

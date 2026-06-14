@@ -7,6 +7,10 @@ export interface SettingsState {
   applySettingsChanged: (settings: Settings) => void;
 }
 
+function basePath(): string {
+  return window.location.pathname.replace(/\/+$/, '');
+}
+
 export function useSettings(): SettingsState {
   const [settings, setSettings] = useState<Settings>(() => {
     try {
@@ -17,7 +21,7 @@ export function useSettings(): SettingsState {
   });
 
   useEffect(() => {
-    fetch('/api/settings')
+    fetch(`${basePath()}/api/settings`)
       .then((res) => {
         if (res.ok) return res.json();
         throw new Error('Failed to fetch settings');
@@ -30,7 +34,7 @@ export function useSettings(): SettingsState {
   }, []);
 
   const updateSettings = useCallback(async (newSettings: Settings) => {
-    const res = await fetch('/api/settings', {
+    const res = await fetch(`${basePath()}/api/settings`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(newSettings),
