@@ -21,8 +21,8 @@ const manager = new SessionManager(settingsManager);
 const { broadcastControl } = setupWebSocketServer(server, manager, settingsManager);
 
 const feedCollector = new FeedCollector(manager, {
-  intervalMs: parseInt(process.env.FEED_INTERVAL_MS || '60000', 10),
-  maxEntries: parseInt(process.env.FEED_MAX_ENTRIES || '60', 10),
+  intervalMs: parseInt(process.env.FEED_INTERVAL_MS ?? '', 10) || 60000,
+  maxEntries: parseInt(process.env.FEED_MAX_ENTRIES ?? '', 10) || 60,
 });
 
 // Security headers — no new dependencies, no CSP (SPA inline scripts), no HSTS (gateway handles TLS)
@@ -71,8 +71,9 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
 
 // Create a default session so the user sees a terminal immediately
 const initialSession = manager.createSession();
-initialSession.onExit(() => {
+initialSession.onExit((exitCode) => {
   manager.closeSession(initialSession.id);
+  broadcastControl({ type: 'session-closed', sessionId: initialSession.id, exitCode });
 });
 
 server.listen(PORT, HOST, () => {

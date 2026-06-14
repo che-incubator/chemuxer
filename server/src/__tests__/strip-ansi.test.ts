@@ -45,4 +45,8 @@ describe('stripAnsi', () => {
   it('strips alternate screen buffer sequences', () => {
     expect(stripAnsi('\x1b[?1049hcontent\x1b[?1049l')).toBe('content');
   });
+
+  it('strips G0 charset select ESC(B without leaving stray B', () => {
+    expect(stripAnsi('\x1b(Bhello')).toBe('hello');
+  });
 });
