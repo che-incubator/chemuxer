@@ -48,7 +48,7 @@ app.put('/api/settings', (req, res) => {
     const updated = settingsManager.writeSettingsRaw(JSON.stringify(req.body));
     res.json(updated);
   } catch (err: any) {
-    res.status(400).json({ error: err.message });
+    res.status(400).json({ error: 'Invalid settings' });
   }
 });
 
@@ -61,6 +61,12 @@ app.use(createApiRouter(manager, feedCollector, broadcastControl));
 // SPA fallback — must come after API routes and agents.md
 app.get(/^(?!\/api\/)/, (_req, res) => {
   res.sendFile(path.join(STATIC_DIR, 'index.html'));
+});
+
+// Global error handler — log internally, never expose details to client
+app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  console.error(err);
+  res.status(500).json({ error: 'Internal server error' });
 });
 
 // Create a default session so the user sees a terminal immediately

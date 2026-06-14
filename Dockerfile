@@ -32,4 +32,5 @@ USER chemuxer
 ENV HOST=0.0.0.0
 ENV STATIC_DIR=/app/dist/client
 EXPOSE 7681
+ENV NODE_ENV=production
 CMD ["node", "dist/server/server.js"]
