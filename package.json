@@ -10,6 +10,7 @@
     "build:bundle": "esbuild server/src/main.ts --bundle --platform=node --target=node22 --format=cjs --outfile=dist/server/server.js --external:node-pty",
     "build:all": "npm run build:bundle && npm run build:client",
     "start": "node dist/server/main.js",
+    "start:bundle": "node dist/server/server.js",
     "test": "vitest run",
     "test:watch": "vitest",
     "docker:build": "docker build -t chemuxer .",

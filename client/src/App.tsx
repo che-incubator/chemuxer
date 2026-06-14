@@ -10,7 +10,7 @@ import { DragProvider } from './contexts/DragContext.js';
 import type { DropZone } from './types/layout.js';
 import './App.css';
 
-const BASE_PATH = window.location.pathname.replace(/\/+$/, '');
+const BASE_PATH = new URL('.', document.baseURI).pathname.replace(/\/+$/, '');
 const WS_BASE = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}${BASE_PATH}/ws`;
 
 export function App() {
