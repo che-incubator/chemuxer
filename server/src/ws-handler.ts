@@ -2,13 +2,21 @@ import http from 'http';
 import { WebSocketServer, WebSocket } from 'ws';
 import { SessionManager, SessionLimitError } from './session-manager.js';
 import { SettingsManager } from './settings-manager.js';
-import type { ClientControlMessage, ClientIOMessage } from '../../shared/protocol.js';
+import type {
+  ClientControlMessage,
+  ClientIOMessage,
+  ServerControlMessage,
+} from '../../shared/protocol.js';
+import {
+  isClientControlMessage,
+  isClientIOMessage,
+} from '../../shared/protocol.js';
 
 export function setupWebSocketServer(
   server: http.Server,
   manager: SessionManager,
   settingsManager: SettingsManager
-): { broadcastControl: (data: object) => void } {
+): { broadcastControl: (data: ServerControlMessage) => void } {
   const MAX_CONNECTIONS = 100;
   const wss = new WebSocketServer({ noServer: true, maxPayload: 1 * 1024 * 1024 });
   let activeConnections = 0;
@@ -81,7 +89,7 @@ export function setupWebSocketServer(
     }
   });
 
-  function broadcastControl(data: object): void {
+  function broadcastControl(data: ServerControlMessage): void {
     const msg = JSON.stringify(data);
     for (const client of controlClients) {
       if (client.readyState === WebSocket.OPEN) {
@@ -100,12 +108,20 @@ export function setupWebSocketServer(
     ws.send(JSON.stringify({ type: 'sessions', sessions: mgr.listSessions() }));
 
     ws.on('message', (raw) => {
-      let msg: ClientControlMessage;
+      let parsed: unknown;
       try {
-        msg = JSON.parse(raw.toString());
+        parsed = JSON.parse(raw.toString());
       } catch {
         return;
       }
+
+      if (!isClientControlMessage(parsed)) {
+        console.warn('[ws] invalid control message:', parsed);
+        ws.send(JSON.stringify({ type: 'error', error: 'Invalid control message' }));
+        return;
+      }
+
+      const msg: ClientControlMessage = parsed;
 
       if (msg.type === 'create') {
         let session;
@@ -167,12 +183,17 @@ export function setupWebSocketServer(
       if (isBinary) {
         session.write(raw.toString());
       } else {
-        let msg: ClientIOMessage;
+        let parsed: unknown;
         try {
-          msg = JSON.parse(raw.toString());
+          parsed = JSON.parse(raw.toString());
         } catch {
           return;
         }
+        if (!isClientIOMessage(parsed)) {
+          console.warn('[ws] invalid IO message:', parsed);
+          return;
+        }
+        const msg: ClientIOMessage = parsed;
         if (msg.type === 'resize') {
           session.resize(msg.cols, msg.rows);
         }
