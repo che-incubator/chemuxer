@@ -5,6 +5,8 @@ import '@xterm/xterm/css/xterm.css';
 import { useReconnectingWebSocket } from '../hooks/useReconnectingWebSocket.js';
 import { resolveTheme, type Settings } from '../../../shared/settings.js';
 
+const encoder = new TextEncoder();
+
 interface TerminalProps {
   sessionId: string;
   wsUrl: string;
@@ -65,7 +67,7 @@ export function Terminal({ sessionId, wsUrl, visible, settings }: TerminalProps)
 
     const onData = term.onData((data) => {
       if (ws.readyState === WebSocket.OPEN) {
-        ws.send(new TextEncoder().encode(data));
+        ws.send(encoder.encode(data));
       }
     });
 

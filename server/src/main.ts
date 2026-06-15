@@ -45,7 +45,7 @@ app.get('/api/settings', (_req, res) => {
 
 app.put('/api/settings', (req, res) => {
   try {
-    const updated = settingsManager.writeSettingsRaw(JSON.stringify(req.body));
+    const updated = settingsManager.writeSettings(req.body);
     res.json(updated);
   } catch (err) {
     console.error('[settings] PUT failed:', err);

@@ -7,11 +7,11 @@ import { LayoutRenderer } from './components/LayoutRenderer.js';
 import { CommandPalette } from './components/CommandPalette.js';
 import { ConnectionBanner } from './components/ConnectionBanner.js';
 import { DragProvider } from './contexts/DragContext.js';
+import { basePath } from './utils/basePath.js';
 import type { DropZone } from './types/layout.js';
 import './App.css';
 
-const BASE_PATH = new URL('.', document.baseURI).pathname.replace(/\/+$/, '');
-const WS_BASE = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}${BASE_PATH}/ws`;
+const WS_BASE = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}${basePath()}/ws`;
 
 export function App() {
   const { settings, updateSettings, applySettingsChanged } = useSettings();

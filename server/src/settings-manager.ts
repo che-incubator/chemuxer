@@ -71,20 +71,15 @@ export class SettingsManager {
   }
 
   writeSettings(partial: Partial<Settings>): Settings {
-    const merged = mergeWithDefaults({ ...this.settingsToRaw(), ...partial });
+    const merged = mergeWithDefaults({
+      terminal: { ...this.settings.terminal, ...(partial.terminal ?? {}) },
+      shell: { ...this.settings.shell, ...(partial.shell ?? {}) },
+      scrollback: { ...this.settings.scrollback, ...(partial.scrollback ?? {}) },
+    });
     this.settings = merged;
     fs.writeFileSync(this.configPath, JSON.stringify(merged, null, 2));
     this.notifyChange();
     return merged;
-  }
-
-  writeSettingsRaw(jsonString: string): Settings {
-    const parsed = JSON.parse(jsonString);
-    return this.writeSettings(parsed);
-  }
-
-  private settingsToRaw(): Settings {
-    return JSON.parse(JSON.stringify(this.settings));
   }
 
   onChange(cb: ChangeCallback): void {

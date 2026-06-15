@@ -1,8 +1,8 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useMemo } from 'react';
 import Editor, { type OnMount, type Monaco } from '@monaco-editor/react';
 import type { editor } from 'monaco-editor';
 import type { Settings } from '../../../shared/settings.js';
-import { basePath } from '../hooks/useSettings.js';
+import { basePath } from '../utils/basePath.js';
 
 interface SettingsEditorProps {
   settings: Settings;
@@ -14,6 +14,7 @@ export function SettingsEditor({ settings, onSave, visible }: SettingsEditorProp
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const onSaveRef = useRef(onSave);
   onSaveRef.current = onSave;
+  const settingsJson = useMemo(() => JSON.stringify(settings, null, 2), [settings]);
 
   const handleMount: OnMount = (editor, monaco) => {
     editorRef.current = editor;
@@ -46,12 +47,11 @@ export function SettingsEditor({ settings, onSave, visible }: SettingsEditorProp
   useEffect(() => {
     if (editorRef.current) {
       const currentValue = editorRef.current.getValue();
-      const newValue = JSON.stringify(settings, null, 2);
-      if (currentValue !== newValue) {
-        editorRef.current.setValue(newValue);
+      if (currentValue !== settingsJson) {
+        editorRef.current.setValue(settingsJson);
       }
     }
-  }, [settings]);
+  }, [settingsJson]);
 
   return (
     <div className="settings-editor" style={{ display: visible ? 'block' : 'none' }}>
@@ -59,7 +59,7 @@ export function SettingsEditor({ settings, onSave, visible }: SettingsEditorProp
         height="100%"
         language="json"
         theme={settings.terminal.theme.includes('mocha') ? 'vs-dark' : 'vs'}
-        value={JSON.stringify(settings, null, 2)}
+        value={settingsJson}
         onMount={handleMount}
         options={{
           minimap: { enabled: false },

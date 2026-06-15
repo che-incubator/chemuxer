@@ -13,7 +13,6 @@ function mockSettingsManager() {
     dispose: () => {},
     getSchemaString: () => '{}',
     writeSettings: () => DEFAULT_SETTINGS,
-    writeSettingsRaw: () => DEFAULT_SETTINGS,
   } as any;
 }
 
