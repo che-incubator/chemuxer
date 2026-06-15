@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { useReconnectingWebSocket } from '../hooks/useReconnectingWebSocket.js';
+import { useReconnectingWebSocket, type ConnectionState } from '../hooks/useReconnectingWebSocket.js';
 
 class MockWebSocket {
   static instances: MockWebSocket[] = [];
@@ -38,6 +38,14 @@ class MockWebSocket {
   }
 }
 
+function expectConnected(state: ConnectionState): asserts state is { status: 'connected'; ws: WebSocket } {
+  expect(state.status).toBe('connected');
+}
+
+function expectDisconnected(state: ConnectionState): asserts state is { status: 'disconnected'; retryIn: number } {
+  expect(state.status).toBe('disconnected');
+}
+
 describe('useReconnectingWebSocket', () => {
   let originalWebSocket: typeof globalThis.WebSocket;
 
@@ -61,8 +69,8 @@ describe('useReconnectingWebSocket', () => {
     });
 
     expect(MockWebSocket.instances).toHaveLength(1);
-    expect(result.current.connected).toBe(true);
-    expect(result.current.retryIn).toBeNull();
+    expectConnected(result.current);
+    expect(result.current.ws).toBeInstanceOf(MockWebSocket);
   });
 
   it('reconnects with exponential backoff after disconnect', async () => {
@@ -72,13 +80,13 @@ describe('useReconnectingWebSocket', () => {
       await vi.advanceTimersByTimeAsync(0);
     });
 
-    expect(result.current.connected).toBe(true);
+    expectConnected(result.current);
 
     act(() => {
       MockWebSocket.instances[0].simulateClose();
     });
 
-    expect(result.current.connected).toBe(false);
+    expectDisconnected(result.current);
     expect(result.current.retryIn).toBe(1);
 
     await act(async () => {
@@ -96,14 +104,17 @@ describe('useReconnectingWebSocket', () => {
     });
 
     act(() => { MockWebSocket.instances[0].simulateClose(); });
+    expectDisconnected(result.current);
     expect(result.current.retryIn).toBe(1);
 
     await act(async () => { await vi.advanceTimersByTimeAsync(1001); });
     act(() => { MockWebSocket.instances[1].simulateClose(); });
+    expectDisconnected(result.current);
     expect(result.current.retryIn).toBe(2);
 
     await act(async () => { await vi.advanceTimersByTimeAsync(2001); });
     act(() => { MockWebSocket.instances[2].simulateClose(); });
+    expectDisconnected(result.current);
     expect(result.current.retryIn).toBe(4);
   });
 
@@ -117,13 +128,13 @@ describe('useReconnectingWebSocket', () => {
     act(() => { MockWebSocket.instances[0].simulateClose(); });
     await act(async () => { await vi.advanceTimersByTimeAsync(1001); });
 
-    expect(result.current.connected).toBe(true);
-    expect(result.current.retryIn).toBeNull();
+    expectConnected(result.current);
 
     // Wait for backoff reset timeout to fire (10ms)
     await act(async () => { await vi.advanceTimersByTimeAsync(10); });
 
     act(() => { MockWebSocket.instances[1].simulateClose(); });
+    expectDisconnected(result.current);
     expect(result.current.retryIn).toBe(1);
   });
 
@@ -138,9 +149,11 @@ describe('useReconnectingWebSocket', () => {
     await act(async () => { await vi.advanceTimersByTimeAsync(1001); });
 
     act(() => { MockWebSocket.instances[1].simulateClose(); });
+    expectDisconnected(result.current);
     expect(result.current.retryIn).toBe(2);
 
     await act(async () => { await vi.advanceTimersByTimeAsync(1000); });
+    expectDisconnected(result.current);
     expect(result.current.retryIn).toBe(1);
   });
 
@@ -158,38 +171,40 @@ describe('useReconnectingWebSocket', () => {
     }
 
     act(() => { MockWebSocket.instances[6].simulateClose(); });
+    expectDisconnected(result.current);
     expect(result.current.retryIn).toBe(30);
   });
 
-  it('ws is set immediately on connect (before open)', async () => {
+  it('starts in connecting state before socket opens', async () => {
     const { result } = renderHook(() => useReconnectingWebSocket('ws://test'));
 
-    expect(result.current.ws).not.toBeNull();
-    expect(result.current.ws).toBeInstanceOf(MockWebSocket);
-    expect(result.current.connected).toBe(false);
+    expect(result.current.status).toBe('connecting');
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(0);
     });
 
-    expect(result.current.connected).toBe(true);
+    expectConnected(result.current);
   });
 
-  it('ws becomes null after disconnect and non-null after reconnect', async () => {
+  it('transitions through connecting -> connected -> disconnected -> connected', async () => {
     const { result } = renderHook(() => useReconnectingWebSocket('ws://test'));
+
+    expect(result.current.status).toBe('connecting');
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(0);
     });
 
-    expect(result.current.ws).not.toBeNull();
+    expectConnected(result.current);
+    expect(result.current.ws).toBeInstanceOf(MockWebSocket);
 
     act(() => { MockWebSocket.instances[0].simulateClose(); });
-    expect(result.current.ws).toBeNull();
+    expectDisconnected(result.current);
 
     await act(async () => { await vi.advanceTimersByTimeAsync(1001); });
 
-    expect(result.current.ws).not.toBeNull();
+    expectConnected(result.current);
     expect(result.current.ws).toBeInstanceOf(MockWebSocket);
   });
 

@@ -6,16 +6,13 @@ export interface ReconnectingWebSocketOptions {
   onMessage?: (event: MessageEvent) => void;
 }
 
-export interface ReconnectingWebSocket {
-  ws: WebSocket | null;
-  connected: boolean;
-  retryIn: number | null;
-}
+export type ConnectionState =
+  | { status: 'connecting' }
+  | { status: 'connected'; ws: WebSocket }
+  | { status: 'disconnected'; retryIn: number };
 
-export function useReconnectingWebSocket(url: string, options?: ReconnectingWebSocketOptions): ReconnectingWebSocket {
-  const [ws, setWs] = useState<WebSocket | null>(null);
-  const [connected, setConnected] = useState(false);
-  const [retryIn, setRetryIn] = useState<number | null>(null);
+export function useReconnectingWebSocket(url: string, options?: ReconnectingWebSocketOptions): ConnectionState {
+  const [state, setState] = useState<ConnectionState>({ status: 'connecting' });
   const socketRef = useRef<WebSocket | null>(null);
   const onMessageRef = useRef(options?.onMessage);
   const backoffRef = useRef(1);
@@ -48,7 +45,6 @@ export function useReconnectingWebSocket(url: string, options?: ReconnectingWebS
     const socket = new WebSocket(url);
     socket.binaryType = 'arraybuffer';
     socketRef.current = socket;
-    setWs(socket);
 
     socket.onmessage = (event) => {
       onMessageRef.current?.(event);
@@ -56,8 +52,7 @@ export function useReconnectingWebSocket(url: string, options?: ReconnectingWebS
 
     socket.onopen = () => {
       if (unmountedRef.current) return;
-      setConnected(true);
-      setRetryIn(null);
+      setState({ status: 'connected', ws: socket });
       clearTimers();
 
       resetBackoffTimeoutRef.current = setTimeout(() => {
@@ -68,8 +63,6 @@ export function useReconnectingWebSocket(url: string, options?: ReconnectingWebS
     socket.onclose = () => {
       if (unmountedRef.current) return;
       socketRef.current = null;
-      setWs(null);
-      setConnected(false);
 
       if (resetBackoffTimeoutRef.current) {
         clearTimeout(resetBackoffTimeoutRef.current);
@@ -77,14 +70,15 @@ export function useReconnectingWebSocket(url: string, options?: ReconnectingWebS
       }
 
       const delay = backoffRef.current;
-      setRetryIn(delay);
+      setState({ status: 'disconnected', retryIn: delay });
       backoffRef.current = Math.min(MAX_BACKOFF, delay * 2);
 
       countdownRef.current = setInterval(() => {
-        setRetryIn((prev) => {
-          if (prev === null || prev <= 1) return prev;
-          return prev - 1;
-        });
+        setState((prev) =>
+          prev.status === 'disconnected' && prev.retryIn > 1
+            ? { ...prev, retryIn: prev.retryIn - 1 }
+            : prev
+        );
       }, 1000);
 
       retryTimeoutRef.current = setTimeout(() => {
@@ -106,5 +100,5 @@ export function useReconnectingWebSocket(url: string, options?: ReconnectingWebS
     };
   }, [connect, clearTimers]);
 
-  return { ws, connected, retryIn };
+  return state;
 }

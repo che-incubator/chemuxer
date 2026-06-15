@@ -29,7 +29,8 @@ export function Terminal({ sessionId, wsUrl, visible, settings }: TerminalProps)
     term.write(data);
   }, []);
 
-  const { ws } = useReconnectingWebSocket(fullUrl, { onMessage: handleMessage });
+  const connState = useReconnectingWebSocket(fullUrl, { onMessage: handleMessage });
+  const ws = connState.status === 'connected' ? connState.ws : null;
 
   useEffect(() => {
     const container = containerRef.current;
