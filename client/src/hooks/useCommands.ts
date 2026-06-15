@@ -87,7 +87,7 @@ export function useCommands(
         id: `theme-${name}`,
         label: name,
         action: () => {
-          updateSettings({ ...settings, terminal: { ...settings.terminal, theme: name } });
+          updateSettings({ ...settings, terminal: { ...settings.terminal, theme: name } }).catch(console.warn);
         },
       })),
     },
