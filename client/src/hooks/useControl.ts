@@ -44,17 +44,24 @@ export function useControl(url: string, options?: ControlOptions): ControlState 
     }
   }, []);
 
-  const { ws, connected, retryIn } = useReconnectingWebSocket(url, { onMessage: handleMessage });
+  const connState = useReconnectingWebSocket(url, { onMessage: handleMessage });
 
   const send = useCallback((msg: object) => {
-    if (ws?.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify(msg));
+    if (connState.status === 'connected') {
+      connState.ws.send(JSON.stringify(msg));
     }
-  }, [ws]);
+  }, [connState]);
 
   const createSession = useCallback(() => send({ type: 'create' }), [send]);
   const closeSession = useCallback((id: string) => send({ type: 'close', sessionId: id }), [send]);
   const renameSession = useCallback((id: string, title: string) => send({ type: 'rename', sessionId: id, title }), [send]);
 
-  return { sessions, createSession, closeSession, renameSession, connected, retryIn };
+  return {
+    sessions,
+    createSession,
+    closeSession,
+    renameSession,
+    connected: connState.status === 'connected',
+    retryIn: connState.status === 'disconnected' ? connState.retryIn : null,
+  };
 }
