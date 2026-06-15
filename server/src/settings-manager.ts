@@ -58,12 +58,12 @@ export class SettingsManager {
 
   private notifyChange(): void {
     for (const cb of this.changeListeners) {
-      cb(this.settings);
+      cb(structuredClone(this.settings));
     }
   }
 
   getSettings(): Settings {
-    return this.settings;
+    return structuredClone(this.settings);
   }
 
   getSchemaString(): string {

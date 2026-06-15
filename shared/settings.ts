@@ -110,7 +110,14 @@ export interface Settings {
   scrollback: ScrollbackSettings;
 }
 
-export const DEFAULT_SETTINGS: Settings = {
+function deepFreeze<T extends object>(obj: T): T {
+  for (const val of Object.values(obj)) {
+    if (val && typeof val === 'object') deepFreeze(val);
+  }
+  return Object.freeze(obj);
+}
+
+export const DEFAULT_SETTINGS: Settings = deepFreeze({
   terminal: {
     fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', Menlo, monospace",
     fontSize: 14,
@@ -122,7 +129,7 @@ export const DEFAULT_SETTINGS: Settings = {
   scrollback: {
     lines: 5000,
   },
-};
+});
 
 export function resolveTheme(themeName: string): TerminalTheme {
   return THEMES[themeName] ?? THEMES['catppuccin-mocha'];
