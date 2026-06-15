@@ -79,8 +79,6 @@ export interface LayoutState {
 export interface LayoutDeps {
   sessions: SessionInfo[];
   createSession: () => void;
-  closeSession: (id: string) => void;
-  renameSession: (id: string, title: string) => void;
 }
 
 export function useLayout(deps: LayoutDeps): LayoutState {

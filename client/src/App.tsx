@@ -20,8 +20,6 @@ export function App() {
   const layout = useLayout({
     sessions: control.sessions,
     createSession: control.createSession,
-    closeSession: control.closeSession,
-    renameSession: control.renameSession,
   });
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [renamingSessionId, setRenamingSessionId] = useState<string | null>(null);

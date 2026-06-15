@@ -14,8 +14,6 @@ describe('useLayout', () => {
     return {
       sessions,
       createSession: vi.fn(),
-      closeSession: vi.fn(),
-      renameSession: vi.fn(),
     };
   }
 
