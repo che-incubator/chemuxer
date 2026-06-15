@@ -40,8 +40,8 @@ export class SettingsManager {
         this.settings = updated;
         this.notifyChange();
       });
-    } catch {
-      console.warn('[SettingsManager] fs.watch not available, settings hot-reload disabled');
+    } catch (e) {
+      console.warn('[SettingsManager] fs.watch not available, settings hot-reload disabled:', e);
     }
   }
 
