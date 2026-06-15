@@ -1,5 +1,5 @@
 import type { LayoutState } from './useLayout.js';
-import { THEMES, type Settings } from '../../../shared/settings.js';
+import { THEMES, type Settings, type ThemeName } from '../../../shared/settings.js';
 
 export interface Command {
   id: string;
@@ -69,7 +69,7 @@ export function useCommands(
     {
       id: 'select-theme',
       label: 'Select Color Theme',
-      children: Object.keys(THEMES).map((name) => ({
+      children: (Object.keys(THEMES) as ThemeName[]).map((name) => ({
         id: `theme-${name}`,
         label: name,
         action: () => {

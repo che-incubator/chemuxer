@@ -29,7 +29,14 @@ export interface TerminalTheme {
   subtext0: string;
 }
 
-export const THEMES: Record<string, TerminalTheme> = {
+function deepFreeze<T extends object>(obj: T): T {
+  for (const val of Object.values(obj)) {
+    if (val && typeof val === 'object') deepFreeze(val);
+  }
+  return Object.freeze(obj);
+}
+
+export const THEMES = {
   'catppuccin-mocha': {
     background: '#1e1e2e',
     foreground: '#cdd6f4',
@@ -88,12 +95,16 @@ export const THEMES: Record<string, TerminalTheme> = {
     text: '#4c4f69',
     subtext0: '#6c6f85',
   },
-};
+} as const satisfies Record<string, TerminalTheme>;
+
+deepFreeze(THEMES);
+
+export type ThemeName = keyof typeof THEMES;
 
 export interface TerminalSettings {
   fontFamily: string;
   fontSize: number;
-  theme: string;
+  theme: ThemeName;
 }
 
 export interface ShellSettings {
@@ -108,13 +119,6 @@ export interface Settings {
   terminal: TerminalSettings;
   shell: ShellSettings;
   scrollback: ScrollbackSettings;
-}
-
-function deepFreeze<T extends object>(obj: T): T {
-  for (const val of Object.values(obj)) {
-    if (val && typeof val === 'object') deepFreeze(val);
-  }
-  return Object.freeze(obj);
 }
 
 export const DEFAULT_SETTINGS: Settings = deepFreeze({
@@ -132,7 +136,7 @@ export const DEFAULT_SETTINGS: Settings = deepFreeze({
 });
 
 export function resolveTheme(themeName: string): TerminalTheme {
-  return THEMES[themeName] ?? THEMES['catppuccin-mocha'];
+  return THEMES[themeName as ThemeName] ?? THEMES[DEFAULT_SETTINGS.terminal.theme];
 }
 
 export function clampSettings(settings: Settings): Settings {
@@ -141,6 +145,7 @@ export function clampSettings(settings: Settings): Settings {
     terminal: {
       ...settings.terminal,
       fontSize: Math.min(32, Math.max(8, settings.terminal.fontSize)),
+      theme: settings.terminal.theme in THEMES ? settings.terminal.theme : DEFAULT_SETTINGS.terminal.theme,
     },
     scrollback: {
       ...settings.scrollback,
