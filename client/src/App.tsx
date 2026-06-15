@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { resolveTheme } from '../../shared/settings.js';
+import { useControl } from './hooks/useControl.js';
 import { useLayout } from './hooks/useLayout.js';
 import { useSettings } from './hooks/useSettings.js';
 import { useCommands } from './hooks/useCommands.js';
@@ -15,7 +16,11 @@ const WS_BASE = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${wi
 
 export function App() {
   const { settings, updateSettings, applySettingsChanged } = useSettings();
-  const layout = useLayout(`${WS_BASE}/control`, { onSettingsChanged: applySettingsChanged });
+  const control = useControl(`${WS_BASE}/control`, { onSettingsChanged: applySettingsChanged });
+  const layout = useLayout({
+    sessions: control.sessions,
+    createSession: control.createSession,
+  });
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [renamingSessionId, setRenamingSessionId] = useState<string | null>(null);
 
@@ -23,7 +28,21 @@ export function App() {
     setRenamingSessionId(sessionId);
   }, []);
 
-  const commands = useCommands(layout, settings, updateSettings, { onRenameRequest: handleRenameRequest });
+  const commands = useCommands(
+    {
+      panes: layout.panes,
+      focusedPaneId: layout.focusedPaneId,
+      zoomedPaneId: layout.zoomedPaneId,
+      createSession: control.createSession,
+      closeSession: control.closeSession,
+      openSettings: layout.openSettings,
+      toggleZoom: layout.toggleZoom,
+      createSplitSession: layout.createSplitSession,
+    },
+    settings,
+    updateSettings,
+    { onRenameRequest: handleRenameRequest },
+  );
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -62,9 +81,9 @@ export function App() {
   }, []);
 
   const handleRenameConfirm = useCallback((sessionId: string, title: string) => {
-    layout.renameSession(sessionId, title);
+    control.renameSession(sessionId, title);
     setRenamingSessionId(null);
-  }, [layout.renameSession]);
+  }, [control.renameSession]);
 
   const handleRenameCancel = useCallback(() => {
     setRenamingSessionId(null);
@@ -80,18 +99,18 @@ export function App() {
   return (
     <DragProvider>
       <div className="app">
-        <ConnectionBanner connected={layout.connected} retryIn={layout.retryIn} />
+        <ConnectionBanner connected={control.connected} retryIn={control.retryIn} />
         <div className="app-content">
           <LayoutRenderer
             node={layout.tree}
             panes={layout.panes}
-            sessions={layout.sessions}
+            sessions={control.sessions}
             wsUrl={WS_BASE}
             settings={settings}
             zoomedPaneId={layout.zoomedPaneId}
             onSelectSession={layout.setActiveSession}
-            onCloseSession={layout.closeSession}
-            onCreateSession={layout.createSession}
+            onCloseSession={control.closeSession}
+            onCreateSession={control.createSession}
             onSplit={layout.splitPane}
             onMoveTab={layout.moveTab}
             onFocus={layout.setFocusedPane}

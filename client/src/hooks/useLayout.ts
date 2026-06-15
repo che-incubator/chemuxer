@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
-import { useControl } from './useControl.js';
+import type { SessionInfo } from '../../../shared/protocol.js';
 import type { LayoutNode, Pane, DropZone, TabEntry } from '../types/layout.js';
 
 const LAYOUT_STORAGE_KEY = 'chemuxer-layout:v1';
@@ -61,33 +61,27 @@ function tabEntryEquals(a: TabEntry | null, b: TabEntry | null): boolean {
 export interface LayoutState {
   tree: LayoutNode;
   panes: Record<string, Pane>;
-  sessions: import('../../../shared/protocol.js').SessionInfo[];
   focusedPaneId: string | null;
   zoomedPaneId: string | null;
-  connected: boolean;
-  retryIn: number | null;
   splitPane: (targetPaneId: string, sessionId: string, zone: DropZone) => void;
   moveTab: (sessionId: string, sourcePaneId: string, targetPaneId: string) => void;
   setActiveSession: (paneId: string, sessionId: string) => void;
   setFocusedPane: (paneId: string) => void;
-  createSession: () => void;
-  closeSession: (sessionId: string) => void;
   openSettings: () => void;
   selectSettings: (paneId: string) => void;
   moveSettings: (sourcePaneId: string, targetPaneId: string) => void;
   splitSettings: (targetPaneId: string, sourcePaneId: string, zone: DropZone) => void;
   closeSettings: (paneId: string) => void;
   createSplitSession: (targetPaneId: string, zone: DropZone) => void;
-  renameSession: (sessionId: string, title: string) => void;
   toggleZoom: () => void;
 }
 
-interface LayoutOptions {
-  onSettingsChanged?: (settings: import('../../../shared/settings.js').Settings) => void;
+export interface LayoutDeps {
+  sessions: SessionInfo[];
+  createSession: () => void;
 }
 
-export function useLayout(controlUrl: string, options?: LayoutOptions): LayoutState {
-  const control = useControl(controlUrl, { onSettingsChanged: options?.onSettingsChanged });
+export function useLayout(deps: LayoutDeps): LayoutState {
 
   const initialPaneId = useMemo(() => generatePaneId(), []);
 
@@ -101,7 +95,7 @@ export function useLayout(controlUrl: string, options?: LayoutOptions): LayoutSt
   const restoredRef = useRef(false);
 
   useEffect(() => {
-    if (!restoredRef.current && control.sessions.length > 0) {
+    if (!restoredRef.current && deps.sessions.length > 0) {
       restoredRef.current = true;
       const savedRaw = localStorage.getItem(LAYOUT_STORAGE_KEY);
       if (savedRaw) {
@@ -111,7 +105,7 @@ export function useLayout(controlUrl: string, options?: LayoutOptions): LayoutSt
             Object.values(saved.panes as Record<string, { entries: TabEntry[] }>)
               .flatMap((p) => p.entries.filter((e) => e.type === 'terminal').map((e: any) => e.sessionId))
           );
-          const serverSessionIds = new Set(control.sessions.map((s) => s.id));
+          const serverSessionIds = new Set(deps.sessions.map((s) => s.id));
           const allMatch = [...savedSessionIds].every((id) => serverSessionIds.has(id));
 
           if (allMatch && savedSessionIds.size > 0) {
@@ -145,9 +139,9 @@ export function useLayout(controlUrl: string, options?: LayoutOptions): LayoutSt
 
     setPanes((prev) => {
       const allPaneSessionIds = new Set(Object.values(prev).flatMap((p) => getTerminalSessionIds(p.entries)));
-      const newSessionIds = control.sessions.map((s) => s.id).filter((id) => !allPaneSessionIds.has(id));
+      const newSessionIds = deps.sessions.map((s) => s.id).filter((id) => !allPaneSessionIds.has(id));
       const removedSessionIds = new Set(
-        [...allPaneSessionIds].filter((id) => !control.sessions.some((s) => s.id === id))
+        [...allPaneSessionIds].filter((id) => !deps.sessions.some((s) => s.id === id))
       );
 
       if (newSessionIds.length === 0 && removedSessionIds.size === 0) return prev;
@@ -198,7 +192,7 @@ export function useLayout(controlUrl: string, options?: LayoutOptions): LayoutSt
         return next.size === prev.size ? prev : next;
       });
     }
-  }, [control.sessions, focusedPaneId, pendingPaneIds, panes]);
+  }, [deps.sessions, focusedPaneId, pendingPaneIds, panes]);
 
   useEffect(() => {
     const emptyPaneIds = Object.entries(panes)
@@ -491,9 +485,9 @@ export function useLayout(controlUrl: string, options?: LayoutOptions): LayoutSt
       setPendingPaneIds((prev) => new Set([...prev, newPaneId]));
       setTree((prev) => replaceLeaf(prev, targetPaneId, splitNode));
       setFocusedPaneId(newPaneId);
-      control.createSession();
+      deps.createSession();
     },
-    [control]
+    [deps.createSession]
   );
 
   const toggleZoom = useCallback(() => {
@@ -506,24 +500,18 @@ export function useLayout(controlUrl: string, options?: LayoutOptions): LayoutSt
   return {
     tree,
     panes,
-    sessions: control.sessions,
     focusedPaneId,
     zoomedPaneId,
-    connected: control.connected,
-    retryIn: control.retryIn,
     splitPane,
     moveTab,
     setActiveSession,
     setFocusedPane: setFocusedPaneId,
-    createSession: control.createSession,
-    closeSession: control.closeSession,
     openSettings,
     selectSettings,
     moveSettings,
     splitSettings,
     closeSettings,
     createSplitSession,
-    renameSession: control.renameSession,
     toggleZoom,
   };
 }

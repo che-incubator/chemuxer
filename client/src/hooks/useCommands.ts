@@ -1,4 +1,4 @@
-import type { LayoutState } from './useLayout.js';
+import type { Pane, DropZone } from '../types/layout.js';
 import { THEMES, type Settings, type ThemeName } from '../../../shared/settings.js';
 
 export interface Command {
@@ -8,17 +8,28 @@ export interface Command {
   children?: Command[];
 }
 
+export interface CommandDeps {
+  panes: Record<string, Pane>;
+  focusedPaneId: string | null;
+  zoomedPaneId: string | null;
+  createSession: () => void;
+  closeSession: (id: string) => void;
+  openSettings: () => void;
+  toggleZoom: () => void;
+  createSplitSession: (targetPaneId: string, zone: DropZone) => void;
+}
+
 interface CommandOptions {
   onRenameRequest?: (sessionId: string) => void;
 }
 
 export function useCommands(
-  layout: LayoutState,
+  deps: CommandDeps,
   settings: Settings,
   updateSettings: (settings: Settings) => Promise<void>,
   options?: CommandOptions,
 ): Command[] {
-  const { panes, focusedPaneId, zoomedPaneId, createSession, closeSession, openSettings } = layout;
+  const { panes, focusedPaneId, zoomedPaneId, createSession, closeSession, openSettings } = deps;
 
   const focusedPane = focusedPaneId ? panes[focusedPaneId] : null;
   const activeSessionId = focusedPane?.activeEntry?.type === 'terminal' ? focusedPane.activeEntry.sessionId : null;
@@ -45,7 +56,7 @@ export function useCommands(
       id: 'toggle-zoom',
       label: 'Toggle Zoom Pane',
       action: () => {
-        layout.toggleZoom();
+        deps.toggleZoom();
       },
     }] : []),
     {
@@ -83,7 +94,7 @@ export function useCommands(
       action: () => {
         if (zoomedPaneId) return;
         if (focusedPaneId) {
-          layout.createSplitSession(focusedPaneId, 'right');
+          deps.createSplitSession(focusedPaneId, 'right');
         }
       },
     },
@@ -93,7 +104,7 @@ export function useCommands(
       action: () => {
         if (zoomedPaneId) return;
         if (focusedPaneId) {
-          layout.createSplitSession(focusedPaneId, 'left');
+          deps.createSplitSession(focusedPaneId, 'left');
         }
       },
     },
@@ -103,7 +114,7 @@ export function useCommands(
       action: () => {
         if (zoomedPaneId) return;
         if (focusedPaneId) {
-          layout.createSplitSession(focusedPaneId, 'bottom');
+          deps.createSplitSession(focusedPaneId, 'bottom');
         }
       },
     },
@@ -113,7 +124,7 @@ export function useCommands(
       action: () => {
         if (zoomedPaneId) return;
         if (focusedPaneId) {
-          layout.createSplitSession(focusedPaneId, 'top');
+          deps.createSplitSession(focusedPaneId, 'top');
         }
       },
     },
