@@ -71,15 +71,11 @@ export class SettingsManager {
   }
 
   writeSettings(partial: Partial<Settings>): Settings {
-    const merged = mergeWithDefaults({ ...this.settingsToRaw(), ...partial });
+    const merged = mergeWithDefaults({ ...this.settings, ...partial });
     this.settings = merged;
     fs.writeFileSync(this.configPath, JSON.stringify(merged, null, 2));
     this.notifyChange();
     return merged;
-  }
-
-  private settingsToRaw(): Settings {
-    return JSON.parse(JSON.stringify(this.settings));
   }
 
   onChange(cb: ChangeCallback): void {
