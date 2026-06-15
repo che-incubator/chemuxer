@@ -1,27 +1,33 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, act } from '@testing-library/react';
 
+vi.mock('../hooks/useControl.js', () => ({
+  useControl: () => ({
+    sessions: [],
+    createSession: vi.fn(),
+    closeSession: vi.fn(),
+    renameSession: vi.fn(),
+    connected: true,
+    retryIn: null,
+  }),
+}));
+
 vi.mock('../hooks/useLayout.js', () => ({
   useLayout: () => ({
     tree: { type: 'leaf', paneId: 'pane-0' },
     panes: { 'pane-0': { id: 'pane-0', entries: [], activeEntry: null } },
-    sessions: [],
     focusedPaneId: 'pane-0',
     zoomedPaneId: null,
-    connected: true,
-    retryIn: null,
     splitPane: vi.fn(),
     moveTab: vi.fn(),
     setActiveSession: vi.fn(),
     setFocusedPane: vi.fn(),
-    createSession: vi.fn(),
-    closeSession: vi.fn(),
     openSettings: vi.fn(),
     selectSettings: vi.fn(),
     moveSettings: vi.fn(),
     splitSettings: vi.fn(),
     closeSettings: vi.fn(),
-    renameSession: vi.fn(),
+    createSplitSession: vi.fn(),
     toggleZoom: vi.fn(),
   }),
 }));
@@ -34,6 +40,7 @@ vi.mock('../hooks/useSettings.js', () => ({
       scrollback: { size: 102400 },
     },
     updateSettings: vi.fn(),
+    applySettingsChanged: vi.fn(),
   }),
 }));
 

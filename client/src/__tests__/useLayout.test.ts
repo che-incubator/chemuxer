@@ -1,58 +1,32 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useLayout, resetPaneIdCounter } from '../hooks/useLayout.js';
-import type { SessionInfo, ServerControlMessage } from '../../../shared/protocol.js';
-
-class MockWebSocket {
-  static instances: MockWebSocket[] = [];
-  static readonly OPEN = 1;
-  readyState = 1;
-  onmessage: ((event: { data: string }) => void) | null = null;
-  onopen: (() => void) | null = null;
-  onclose: (() => void) | null = null;
-  sent: string[] = [];
-
-  constructor(public url: string) {
-    MockWebSocket.instances.push(this);
-    setTimeout(() => this.onopen?.(), 0);
-  }
-
-  send(data: string) {
-    this.sent.push(data);
-  }
-
-  close() {
-    this.readyState = 3;
-  }
-
-  simulateMessage(msg: ServerControlMessage) {
-    this.onmessage?.({ data: JSON.stringify(msg) });
-  }
-}
+import type { LayoutDeps } from '../hooks/useLayout.js';
+import type { SessionInfo } from '../../../shared/protocol.js';
 
 describe('useLayout', () => {
-  let originalWebSocket: typeof globalThis.WebSocket;
-
   beforeEach(() => {
-    MockWebSocket.instances = [];
-    originalWebSocket = globalThis.WebSocket;
-    globalThis.WebSocket = MockWebSocket as any;
     resetPaneIdCounter();
     localStorage.clear();
   });
 
-  afterEach(() => {
-    globalThis.WebSocket = originalWebSocket;
-  });
+  function makeDeps(sessions: SessionInfo[] = []): LayoutDeps {
+    return {
+      sessions,
+      createSession: vi.fn(),
+      closeSession: vi.fn(),
+      renameSession: vi.fn(),
+    };
+  }
 
   it('hook initializes without error', () => {
-    const { result } = renderHook(() => useLayout('ws://test/ws/control'));
+    const { result } = renderHook(() => useLayout(makeDeps()));
     expect(result.current).toBeDefined();
     expect(result.current?.tree).toBeDefined();
   });
 
   it('hook initializes without error (async wrapper)', async () => {
-    const { result } = renderHook(() => useLayout('ws://test/ws/control'));
+    const { result } = renderHook(() => useLayout(makeDeps()));
     expect(result.current).toBeDefined();
     expect(result.current?.tree).toBeDefined();
   });
@@ -66,18 +40,11 @@ describe('useLayout', () => {
   }
 
   async function setupWithSessions(sessions: SessionInfo[]) {
-    const { result } = renderHook(() => useLayout('ws://test/ws/control'));
-    const ws = MockWebSocket.instances[0];
-
-    // Wait for WebSocket to open
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 0));
-    });
-
-    // Send sessions message
-    act(() => {
-      ws.simulateMessage({ type: 'sessions', sessions });
-    });
+    const deps = makeDeps(sessions);
+    const { result, rerender } = renderHook(
+      ({ deps }) => useLayout(deps),
+      { initialProps: { deps } },
+    );
 
     // Wait for the effect to update panes with the new sessions
     await waitFor(() => {
@@ -88,7 +55,7 @@ describe('useLayout', () => {
       }
     });
 
-    return { result, ws };
+    return { result, deps, rerender };
   }
 
   it('initializes with single leaf pane containing all sessions', async () => {
@@ -227,10 +194,11 @@ describe('useLayout', () => {
   });
 
   it('collapse: session closed removes pane and unwraps split', async () => {
-    const { result, ws } = await setupWithSessions([
+    const sessions = [
       { id: 'a', shell: '/bin/bash', title: 'bash', renamed: false, createdAt: 1000 },
       { id: 'b', shell: '/bin/zsh', title: 'zsh', renamed: false, createdAt: 2000 },
-    ]);
+    ];
+    const { result, rerender, deps } = await setupWithSessions(sessions);
 
     const paneId = (result.current.tree as any).paneId;
 
@@ -238,8 +206,9 @@ describe('useLayout', () => {
       result.current.splitPane(paneId, 'b', 'right');
     });
 
+    // Simulate session 'b' being closed by re-rendering with updated sessions
     act(() => {
-      ws.simulateMessage({ type: 'session-closed', sessionId: 'b', exitCode: 0 });
+      rerender({ deps: { ...deps, sessions: [sessions[0]] } });
     });
 
     expect(result.current.tree.type).toBe('leaf');
@@ -261,14 +230,21 @@ describe('useLayout', () => {
   });
 
   it('new session created via server goes into focused pane', async () => {
-    const { result, ws } = await setupWithSessions([
+    const sessions = [
       { id: 'a', shell: '/bin/bash', title: 'bash', renamed: false, createdAt: 1000 },
-    ]);
+    ];
+    const { result, rerender, deps } = await setupWithSessions(sessions);
 
+    // Simulate a new session arriving
     act(() => {
-      ws.simulateMessage({
-        type: 'session-created',
-        session: { id: 'c', shell: '/bin/bash', title: 'bash', renamed: false, createdAt: 3000 },
+      rerender({
+        deps: {
+          ...deps,
+          sessions: [
+            ...sessions,
+            { id: 'c', shell: '/bin/bash', title: 'bash', renamed: false, createdAt: 3000 },
+          ],
+        },
       });
     });
 
@@ -277,11 +253,12 @@ describe('useLayout', () => {
   });
 
   it('closing a terminal tab preserves settings tab position in entries', async () => {
-    const { result, ws } = await setupWithSessions([
+    const sessions = [
       { id: 'a', shell: '/bin/bash', title: 'bash', renamed: false, createdAt: 1000 },
       { id: 'b', shell: '/bin/zsh', title: 'zsh', renamed: false, createdAt: 2000 },
       { id: 'c', shell: '/bin/zsh', title: 'zsh', renamed: false, createdAt: 3000 },
-    ]);
+    ];
+    const { result, rerender, deps } = await setupWithSessions(sessions);
 
     const paneId = (result.current.tree as any).paneId;
 
@@ -295,9 +272,9 @@ describe('useLayout', () => {
     expect(entriesBefore[0].type).toBe('terminal');
     expect(entriesBefore[entriesBefore.length - 1].type).toBe('settings');
 
-    // Close session 'a' (the first terminal tab)
+    // Close session 'a' (the first terminal tab) by re-rendering without it
     act(() => {
-      ws.simulateMessage({ type: 'session-closed', sessionId: 'a', exitCode: 0 });
+      rerender({ deps: { ...deps, sessions: sessions.slice(1) } });
     });
 
     const entriesAfter = result.current.panes[paneId].entries;
@@ -385,9 +362,10 @@ describe('useLayout', () => {
   });
 
   it('createSplitSession creates a split and new session lands in new pane', async () => {
-    const { result, ws } = await setupWithSessions([
+    const sessions = [
       { id: 'a', shell: '/bin/bash', title: 'bash', renamed: false, createdAt: 1000 },
-    ]);
+    ];
+    const { result, rerender, deps } = await setupWithSessions(sessions);
 
     const paneId = (result.current.tree as any).paneId;
 
@@ -403,11 +381,19 @@ describe('useLayout', () => {
     // New pane exists but is empty (waiting for session)
     expect(result.current.panes[secondPaneId].entries).toHaveLength(0);
 
-    // Simulate server creating the session
+    // createSession should have been called
+    expect(deps.createSession).toHaveBeenCalled();
+
+    // Simulate server creating the session by re-rendering with updated sessions
     act(() => {
-      ws.simulateMessage({
-        type: 'session-created',
-        session: { id: 'b', shell: '/bin/bash', title: 'bash', renamed: false, createdAt: 2000 },
+      rerender({
+        deps: {
+          ...deps,
+          sessions: [
+            ...sessions,
+            { id: 'b', shell: '/bin/bash', title: 'bash', renamed: false, createdAt: 2000 },
+          ],
+        },
       });
     });
 
@@ -417,9 +403,10 @@ describe('useLayout', () => {
   });
 
   it('createSplitSession allows multiple nested splits', async () => {
-    const { result, ws } = await setupWithSessions([
+    const sessions = [
       { id: 'a', shell: '/bin/bash', title: 'bash', renamed: false, createdAt: 1000 },
-    ]);
+    ];
+    const { result, rerender, deps } = await setupWithSessions(sessions);
 
     const paneId = (result.current.tree as any).paneId;
 
@@ -428,11 +415,12 @@ describe('useLayout', () => {
       result.current.createSplitSession(paneId, 'right');
     });
 
+    const sessionsAfterFirst = [
+      ...sessions,
+      { id: 'b', shell: '/bin/bash', title: 'bash', renamed: false, createdAt: 2000 },
+    ];
     act(() => {
-      ws.simulateMessage({
-        type: 'session-created',
-        session: { id: 'b', shell: '/bin/bash', title: 'bash', renamed: false, createdAt: 2000 },
-      });
+      rerender({ deps: { ...deps, sessions: sessionsAfterFirst } });
     });
 
     const secondPaneId = (result.current.tree as any).second.paneId;
@@ -443,26 +431,19 @@ describe('useLayout', () => {
     });
 
     act(() => {
-      ws.simulateMessage({
-        type: 'session-created',
-        session: { id: 'c', shell: '/bin/bash', title: 'bash', renamed: false, createdAt: 3000 },
+      rerender({
+        deps: {
+          ...deps,
+          sessions: [
+            ...sessionsAfterFirst,
+            { id: 'c', shell: '/bin/bash', title: 'bash', renamed: false, createdAt: 3000 },
+          ],
+        },
       });
     });
 
     // Should have 3 panes total
     expect(Object.keys(result.current.panes)).toHaveLength(3);
-  });
-
-  it('renameSession sends rename message via control', async () => {
-    const { result } = renderHook(() => useLayout('ws://test/ws/control'));
-    await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
-
-    act(() => {
-      result.current.renameSession('a', 'my server');
-    });
-
-    const ws = MockWebSocket.instances[0];
-    expect(ws.sent).toContainEqual(JSON.stringify({ type: 'rename', sessionId: 'a', title: 'my server' }));
   });
 
   it('toggleZoom sets zoomedPaneId to focusedPaneId', async () => {
@@ -522,15 +503,10 @@ describe('useLayout', () => {
   });
 
   it('saves layout to localStorage on change', async () => {
-    const { result } = renderHook(() => useLayout('ws://test/ws/control'));
-    await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
-    const ws = MockWebSocket.instances[0];
-
-    act(() => {
-      ws.simulateMessage({ type: 'sessions', sessions: [
-        { id: 'a', shell: '/bin/bash', title: 'bash', renamed: false, createdAt: 1000 },
-      ] });
-    });
+    const sessions = [
+      { id: 'a', shell: '/bin/bash', title: 'bash', renamed: false, createdAt: 1000 },
+    ];
+    const { result } = await setupWithSessions(sessions);
 
     const saved = localStorage.getItem('chemuxer-layout:v1');
     expect(saved).not.toBeNull();
@@ -541,15 +517,10 @@ describe('useLayout', () => {
   });
 
   it('excludes settings entries from saved layout', async () => {
-    const { result } = renderHook(() => useLayout('ws://test/ws/control'));
-    await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
-    const ws = MockWebSocket.instances[0];
-
-    act(() => {
-      ws.simulateMessage({ type: 'sessions', sessions: [
-        { id: 'a', shell: '/bin/bash', title: 'bash', renamed: false, createdAt: 1000 },
-      ] });
-    });
+    const sessions = [
+      { id: 'a', shell: '/bin/bash', title: 'bash', renamed: false, createdAt: 1000 },
+    ];
+    const { result } = await setupWithSessions(sessions);
 
     act(() => { result.current.openSettings(); });
 
@@ -575,18 +546,17 @@ describe('useLayout', () => {
     };
     localStorage.setItem('chemuxer-layout:v1', JSON.stringify(savedLayout));
 
-    const { result } = renderHook(() => useLayout('ws://test/ws/control'));
-    await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
-    const ws = MockWebSocket.instances[0];
+    const sessions = [
+      { id: 'a', shell: '/bin/bash', title: 'bash', renamed: false, createdAt: 1000 },
+      { id: 'b', shell: '/bin/zsh', title: 'zsh', renamed: false, createdAt: 2000 },
+    ];
+    const deps = makeDeps(sessions);
+    const { result } = renderHook(() => useLayout(deps));
 
-    act(() => {
-      ws.simulateMessage({ type: 'sessions', sessions: [
-        { id: 'a', shell: '/bin/bash', title: 'bash', renamed: false, createdAt: 1000 },
-        { id: 'b', shell: '/bin/zsh', title: 'zsh', renamed: false, createdAt: 2000 },
-      ] });
+    await waitFor(() => {
+      expect(result.current.tree.type).toBe('split');
     });
 
-    expect(result.current.tree.type).toBe('split');
     expect(Object.keys(result.current.panes)).toHaveLength(2);
     expect(result.current.panes['pane-10']).toBeDefined();
     expect(result.current.panes['pane-11']).toBeDefined();
@@ -610,14 +580,17 @@ describe('useLayout', () => {
     };
     localStorage.setItem('chemuxer-layout:v1', JSON.stringify(savedLayout));
 
-    const { result } = renderHook(() => useLayout('ws://test/ws/control'));
-    await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
-    const ws = MockWebSocket.instances[0];
+    const sessions = [
+      { id: 'new-x', shell: '/bin/bash', title: 'bash', renamed: false, createdAt: 1000 },
+    ];
+    const deps = makeDeps(sessions);
+    const { result } = renderHook(() => useLayout(deps));
 
-    act(() => {
-      ws.simulateMessage({ type: 'sessions', sessions: [
-        { id: 'new-x', shell: '/bin/bash', title: 'bash', renamed: false, createdAt: 1000 },
-      ] });
+    await waitFor(() => {
+      const firstPane = Object.values(result.current.panes)[0];
+      if (!firstPane || getSessionIds(firstPane).length !== 1) {
+        throw new Error('Panes not updated yet');
+      }
     });
 
     expect(result.current.tree.type).toBe('leaf');
@@ -634,18 +607,21 @@ describe('useLayout', () => {
     };
     localStorage.setItem('chemuxer-layout:v1', JSON.stringify(savedLayout));
 
-    const { result } = renderHook(() => useLayout('ws://test/ws/control'));
-    await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
-    const ws = MockWebSocket.instances[0];
+    const sessions = [
+      { id: 'a', shell: '/bin/bash', title: 'bash', renamed: false, createdAt: 1000 },
+      { id: 'b', shell: '/bin/zsh', title: 'zsh', renamed: false, createdAt: 2000 },
+    ];
+    const deps = makeDeps(sessions);
+    const { result } = renderHook(() => useLayout(deps));
 
-    act(() => {
-      ws.simulateMessage({ type: 'sessions', sessions: [
-        { id: 'a', shell: '/bin/bash', title: 'bash', renamed: false, createdAt: 1000 },
-        { id: 'b', shell: '/bin/zsh', title: 'zsh', renamed: false, createdAt: 2000 },
-      ] });
+    await waitFor(() => {
+      expect(result.current.panes['pane-10']).toBeDefined();
+      const sessionIds = result.current.panes['pane-10'].entries
+        .filter((e: any) => e.type === 'terminal')
+        .map((e: any) => e.sessionId);
+      if (!sessionIds.includes('b')) throw new Error('Session b not added yet');
     });
 
-    expect(result.current.panes['pane-10']).toBeDefined();
     const sessionIds = result.current.panes['pane-10'].entries
       .filter((e: any) => e.type === 'terminal')
       .map((e: any) => e.sessionId);
