@@ -57,9 +57,8 @@ export class SettingsManager {
   }
 
   private notifyChange(): void {
-    const snapshot = structuredClone(this.settings);
     for (const cb of this.changeListeners) {
-      cb(snapshot);
+      cb(structuredClone(this.settings));
     }
   }
 
