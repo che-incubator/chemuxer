@@ -71,7 +71,11 @@ export class SettingsManager {
   }
 
   writeSettings(partial: Partial<Settings>): Settings {
-    const merged = mergeWithDefaults({ ...this.settings, ...partial });
+    const merged = mergeWithDefaults({
+      terminal: { ...this.settings.terminal, ...(partial.terminal ?? {}) },
+      shell: { ...this.settings.shell, ...(partial.shell ?? {}) },
+      scrollback: { ...this.settings.scrollback, ...(partial.scrollback ?? {}) },
+    });
     this.settings = merged;
     fs.writeFileSync(this.configPath, JSON.stringify(merged, null, 2));
     this.notifyChange();
