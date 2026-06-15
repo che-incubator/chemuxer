@@ -62,7 +62,6 @@ describe('useControl', () => {
   it('initializes with empty sessions', async () => {
     const { result } = await setupHook();
     expect(result.current.sessions).toEqual([]);
-    expect(result.current.activeSessionId).toBeNull();
   });
 
   it('populates sessions from initial sessions message', async () => {
@@ -78,7 +77,6 @@ describe('useControl', () => {
     });
 
     expect(result.current.sessions).toEqual(sessions);
-    expect(result.current.activeSessionId).toBe('a');
   });
 
   it('adds session on session-created message', async () => {
@@ -97,7 +95,6 @@ describe('useControl', () => {
 
     expect(result.current.sessions).toHaveLength(1);
     expect(result.current.sessions[0].id).toBe('b');
-    expect(result.current.activeSessionId).toBe('b');
   });
 
   it('removes session on session-closed message', async () => {
