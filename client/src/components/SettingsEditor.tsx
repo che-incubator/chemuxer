@@ -43,7 +43,9 @@ export function SettingsEditor({ settings, onSave, visible }: SettingsEditorProp
         onSaveRef.current(parsed).catch((err: Error) => {
           setSaveError(err.message);
         });
-      } catch {}
+      } catch (err) {
+        setSaveError(err instanceof Error ? err.message : 'Invalid JSON');
+      }
     });
 
     editor.onDidChangeModelContent(() => {
