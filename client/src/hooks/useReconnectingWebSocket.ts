@@ -51,7 +51,7 @@ export function useReconnectingWebSocket(url: string, options?: ReconnectingWebS
     };
 
     socket.onopen = () => {
-      if (unmountedRef.current) return;
+      if (unmountedRef.current || socketRef.current !== socket) return;
       setState({ status: 'connected', ws: socket });
       clearTimers();
 
@@ -61,7 +61,7 @@ export function useReconnectingWebSocket(url: string, options?: ReconnectingWebS
     };
 
     socket.onclose = () => {
-      if (unmountedRef.current) return;
+      if (unmountedRef.current || socketRef.current !== socket) return;
       socketRef.current = null;
 
       if (resetBackoffTimeoutRef.current) {
