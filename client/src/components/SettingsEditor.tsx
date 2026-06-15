@@ -40,9 +40,11 @@ export function SettingsEditor({ settings, onSave, visible }: SettingsEditorProp
       const value = editor.getValue();
       try {
         const parsed = JSON.parse(value);
-        onSaveRef.current(parsed).catch((err: Error) => {
-          setSaveError(err.message);
-        });
+        onSaveRef.current(parsed)
+          .then(() => setSaveError(null))
+          .catch((err: unknown) => {
+            setSaveError(err instanceof Error ? err.message : String(err));
+          });
       } catch (err) {
         setSaveError(err instanceof Error ? err.message : 'Invalid JSON');
       }
@@ -67,7 +69,7 @@ export function SettingsEditor({ settings, onSave, visible }: SettingsEditorProp
       {saveError && (
         <div className="settings-error">
           <span>{saveError}</span>
-          <button onClick={() => setSaveError(null)}>&times;</button>
+          <button type="button" aria-label="Dismiss save error" onClick={() => setSaveError(null)}>&times;</button>
         </div>
       )}
       <div style={{ flex: 1, overflow: 'hidden' }}>
