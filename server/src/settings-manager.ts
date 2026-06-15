@@ -78,11 +78,6 @@ export class SettingsManager {
     return merged;
   }
 
-  writeSettingsRaw(jsonString: string): Settings {
-    const parsed = JSON.parse(jsonString);
-    return this.writeSettings(parsed);
-  }
-
   private settingsToRaw(): Settings {
     return JSON.parse(JSON.stringify(this.settings));
   }
