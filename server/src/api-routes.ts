@@ -1,9 +1,14 @@
-import { Router } from 'express';
+import { Router, type Request } from 'express';
 import type { SessionManager } from './session-manager.js';
 import { SessionLimitError } from './session-manager.js';
 import type { FeedCollector } from './feed-collector.js';
+import type { Session } from './session.js';
 import { stripAnsi } from './strip-ansi.js';
 import type { ServerControlMessage } from '../../shared/protocol.js';
+
+interface SessionRequest extends Request {
+  session: Session;
+}
 
 const AGENTS_MD = `# Chemuxer — Agent Instructions
 
@@ -84,6 +89,17 @@ export function createApiRouter(
     res.type('text/markdown').send(AGENTS_MD);
   });
 
+  // Resolve :id param for all /api/sessions/:id routes
+  router.param('id', (req, res, next, id) => {
+    const session = manager.getSession(id);
+    if (!session) {
+      res.status(404).json({ error: 'Session not found', status: 404 });
+      return;
+    }
+    (req as SessionRequest).session = session;
+    next();
+  });
+
   // --- Session CRUD ---
   router.get('/api/sessions', (_req, res) => {
     res.json(manager.listSessions());
@@ -105,36 +121,22 @@ export function createApiRouter(
   });
 
   router.get('/api/sessions/:id', (req, res) => {
-    const session = manager.getSession(req.params.id);
-    if (!session) {
-      res.status(404).json({ error: 'Session not found', status: 404 });
-      return;
-    }
-    res.json(session.toInfo());
+    res.json((req as SessionRequest).session.toInfo());
   });
 
   router.delete('/api/sessions/:id', (req, res) => {
-    const session = manager.getSession(req.params.id);
-    if (!session) {
-      res.status(404).json({ error: 'Session not found', status: 404 });
-      return;
-    }
     manager.closeSession(req.params.id);
     broadcastControl({ type: 'session-closed', sessionId: req.params.id, exitCode: null });
     res.json({ ok: true });
   });
 
   router.patch('/api/sessions/:id', (req, res) => {
-    const session = manager.getSession(req.params.id);
-    if (!session) {
-      res.status(404).json({ error: 'Session not found', status: 404 });
-      return;
-    }
     const { title } = req.body;
     if (typeof title !== 'string') {
       res.status(400).json({ error: 'title must be a string', status: 400 });
       return;
     }
+    const session = (req as SessionRequest).session;
     session.rename(title);
     const info = session.toInfo();
     broadcastControl({ type: 'session-renamed', sessionId: info.id, title: info.title, renamed: info.renamed });
@@ -143,27 +145,17 @@ export function createApiRouter(
 
   // --- Terminal I/O ---
   router.get('/api/sessions/:id/buffer', (req, res) => {
-    const session = manager.getSession(req.params.id);
-    if (!session) {
-      res.status(404).json({ error: 'Session not found', status: 404 });
-      return;
-    }
-    const content = stripAnsi(session.getState());
+    const content = stripAnsi((req as SessionRequest).session.getState());
     res.json({ content });
   });
 
   router.post('/api/sessions/:id/input', (req, res) => {
-    const session = manager.getSession(req.params.id);
-    if (!session) {
-      res.status(404).json({ error: 'Session not found', status: 404 });
-      return;
-    }
     const { data } = req.body;
     if (typeof data !== 'string') {
       res.status(400).json({ error: 'data must be a string', status: 400 });
       return;
     }
-    session.write(data);
+    (req as SessionRequest).session.write(data);
     res.json({ ok: true });
   });
 

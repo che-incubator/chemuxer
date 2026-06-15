@@ -96,7 +96,7 @@ export function useLayout(deps: LayoutDeps): LayoutState {
           const saved = JSON.parse(savedRaw);
           const savedSessionIds = new Set(
             Object.values(saved.panes as Record<string, { entries: TabEntry[] }>)
-              .flatMap((p) => p.entries.filter((e) => e.type === 'terminal').map((e: any) => e.sessionId))
+              .flatMap((p) => p.entries.filter((e): e is { type: 'terminal'; sessionId: string; tabNumber: number } => e.type === 'terminal').map((e) => e.sessionId))
           );
           const serverSessionIds = new Set(deps.sessions.map((s) => s.id));
           const allMatch = [...savedSessionIds].every((id) => serverSessionIds.has(id));
