@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import type { SessionManager } from './session-manager.js';
 import { SessionLimitError } from './session-manager.js';
+import type { SettingsManager } from './settings-manager.js';
 import type { FeedCollector } from './feed-collector.js';
 import { stripAnsi } from './strip-ansi.js';
 import type { ServerControlMessage } from '../../shared/protocol.js';
@@ -74,10 +75,34 @@ for seamless pagination. Omit "since" to get the latest snapshot only.
 
 export function createApiRouter(
   manager: SessionManager,
+  settingsManager: SettingsManager,
   feedCollector: FeedCollector,
   broadcastControl: (data: ServerControlMessage) => void,
 ): Router {
   const router = Router();
+
+  // --- Settings ---
+  router.get('/api/settings', (_req, res) => {
+    res.json(settingsManager.getSettings());
+  });
+
+  router.put('/api/settings', (req, res) => {
+    try {
+      const updated = settingsManager.writeSettings(req.body);
+      res.json(updated);
+    } catch (err) {
+      console.error('[settings] PUT failed:', err);
+      if (err instanceof SyntaxError) {
+        res.status(400).json({ error: 'Invalid settings' });
+      } else {
+        res.status(500).json({ error: 'Internal server error' });
+      }
+    }
+  });
+
+  router.get('/api/settings/schema', (_req, res) => {
+    res.type('application/json').send(settingsManager.getSchemaString());
+  });
 
   // --- agents.md ---
   router.get(['/agents.md', '/.well-known/agents.md'], (_req, res) => {

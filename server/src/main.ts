@@ -40,29 +40,7 @@ app.use(express.static(STATIC_DIR));
 
 app.get('/health', (_req, res) => res.json({ ok: true }));
 
-app.get('/api/settings', (_req, res) => {
-  res.json(settingsManager.getSettings());
-});
-
-app.put('/api/settings', (req, res) => {
-  try {
-    const updated = settingsManager.writeSettings(req.body);
-    res.json(updated);
-  } catch (err) {
-    console.error('[settings] PUT failed:', err);
-    if (err instanceof SyntaxError) {
-      res.status(400).json({ error: 'Invalid settings' });
-    } else {
-      res.status(500).json({ error: 'Internal server error' });
-    }
-  }
-});
-
-app.get('/api/settings/schema', (_req, res) => {
-  res.type('application/json').send(settingsManager.getSchemaString());
-});
-
-app.use(createApiRouter(manager, feedCollector, broadcastControl));
+app.use(createApiRouter(manager, settingsManager, feedCollector, broadcastControl));
 
 // SPA fallback — must come after API routes and agents.md
 app.get(/^(?!\/api\/)/, (_req, res) => {

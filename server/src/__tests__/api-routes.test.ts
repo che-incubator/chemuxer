@@ -32,7 +32,7 @@ describe('API Routes', { timeout: 30000 }, () => {
 
     const app = express();
     app.use(express.json());
-    app.use(createApiRouter(manager, feedCollector, broadcastControl));
+    app.use(createApiRouter(manager, mockSettingsManager(), feedCollector, broadcastControl));
 
     server = http.createServer(app);
     await new Promise<void>(resolve => server.listen(0, resolve));
