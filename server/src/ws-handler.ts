@@ -7,18 +7,10 @@ import type {
   ClientIOMessage,
   ServerControlMessage,
 } from '../../shared/protocol.js';
-
-function isClientControlMessage(msg: unknown): msg is ClientControlMessage {
-  if (!msg || typeof msg !== 'object') return false;
-  const m = msg as Record<string, unknown>;
-  return typeof m.type === 'string' && ['create', 'close', 'rename'].includes(m.type);
-}
-
-function isClientIOMessage(msg: unknown): msg is ClientIOMessage {
-  if (!msg || typeof msg !== 'object') return false;
-  const m = msg as Record<string, unknown>;
-  return typeof m.type === 'string' && m.type === 'resize';
-}
+import {
+  isClientControlMessage,
+  isClientIOMessage,
+} from '../../shared/protocol.js';
 
 export function setupWebSocketServer(
   server: http.Server,

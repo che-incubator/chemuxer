@@ -31,11 +31,22 @@ export type ClientIOMessage =
 export function isClientControlMessage(msg: unknown): msg is ClientControlMessage {
   if (!msg || typeof msg !== 'object') return false;
   const m = msg as Record<string, unknown>;
-  return typeof m.type === 'string' && ['create', 'close', 'rename'].includes(m.type);
+  if (m.type === 'create') return true;
+  if (m.type === 'close') return typeof m.sessionId === 'string';
+  if (m.type === 'rename') return typeof m.sessionId === 'string' && typeof m.title === 'string';
+  return false;
 }
 
 export function isClientIOMessage(msg: unknown): msg is ClientIOMessage {
   if (!msg || typeof msg !== 'object') return false;
   const m = msg as Record<string, unknown>;
-  return typeof m.type === 'string' && m.type === 'resize';
+  return (
+    m.type === 'resize' &&
+    typeof m.cols === 'number' &&
+    Number.isInteger(m.cols) &&
+    m.cols > 0 &&
+    typeof m.rows === 'number' &&
+    Number.isInteger(m.rows) &&
+    m.rows > 0
+  );
 }
