@@ -108,9 +108,8 @@ export function setupWebSocketServer(
       }
 
       if (msg.type === 'create') {
-        let session;
         try {
-          session = mgr.createSession();
+          mgr.createSession();
         } catch (err) {
           if (err instanceof SessionLimitError) {
             ws.send(JSON.stringify({ type: 'error', error: 'Maximum session limit reached' }));
@@ -119,11 +118,6 @@ export function setupWebSocketServer(
           }
           return;
         }
-        session.onExit((exitCode) => {
-          mgr.closeSession(session.id);
-          broadcastControl({ type: 'session-closed', sessionId: session.id, exitCode });
-        });
-        broadcastControl({ type: 'session-created', session: session.toInfo() });
       } else if (msg.type === 'close') {
         mgr.closeSession(msg.sessionId);
         broadcastControl({ type: 'session-closed', sessionId: msg.sessionId, exitCode: null });

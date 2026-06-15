@@ -51,6 +51,7 @@ export class SessionManager {
   private sessions = new Map<string, Session>();
   private shell: string;
   private scrollbackLines: number;
+  private broadcastControl?: (data: object) => void;
 
   constructor(settingsManager: SettingsManager) {
     const settings = settingsManager.getSettings();
@@ -67,12 +68,25 @@ export class SessionManager {
     });
   }
 
+  setBroadcastControl(fn: (data: object) => void): void {
+    this.broadcastControl = fn;
+  }
+
   createSession(): Session {
     if (this.sessions.size >= MAX_SESSIONS) {
       throw new SessionLimitError();
     }
     const session = new Session(this.shell, { scrollbackLines: this.scrollbackLines });
     this.sessions.set(session.id, session);
+
+    session.onExit((exitCode) => {
+      if (!this.sessions.has(session.id)) return;
+      this.closeSession(session.id);
+      this.broadcastControl?.({ type: 'session-closed', sessionId: session.id, exitCode });
+    });
+
+    this.broadcastControl?.({ type: 'session-created', session: session.toInfo() });
+
     return session;
   }
 
