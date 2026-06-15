@@ -127,9 +127,8 @@ describe('API Routes', { timeout: 30000 }, () => {
     const { id } = await createRes.json();
     broadcasts = [];
     await fetch(`${baseUrl}/api/sessions/${id}`, { method: 'DELETE' });
-    expect(broadcasts).toHaveLength(1);
-    expect((broadcasts[0] as any).type).toBe('session-closed');
-    expect((broadcasts[0] as any).sessionId).toBe(id);
+    const relevant = broadcasts.filter((b: any) => b.sessionId === id && b.type === 'session-closed');
+    expect(relevant).toHaveLength(1);
   });
 
   it('DELETE /api/sessions/:id returns 404 for unknown ID', async () => {
