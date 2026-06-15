@@ -3,6 +3,7 @@ import type { SessionManager } from './session-manager.js';
 import { SessionLimitError } from './session-manager.js';
 import type { FeedCollector } from './feed-collector.js';
 import { stripAnsi } from './strip-ansi.js';
+import type { ServerControlMessage } from '../../shared/protocol.js';
 
 const AGENTS_MD = `# Chemuxer — Agent Instructions
 
@@ -74,7 +75,7 @@ for seamless pagination. Omit "since" to get the latest snapshot only.
 export function createApiRouter(
   manager: SessionManager,
   feedCollector: FeedCollector,
-  broadcastControl: (data: object) => void,
+  broadcastControl: (data: ServerControlMessage) => void,
 ): Router {
   const router = Router();
 
