@@ -40,6 +40,10 @@ export function useSettings(): SettingsState {
       const updated = await res.json();
       setSettings(updated);
       localStorage.setItem('chemuxer-settings:v1', JSON.stringify(updated));
+    } else {
+      const msg = `Failed to save settings: ${res.status} ${res.statusText}`;
+      console.warn('[useSettings]', msg);
+      throw new Error(msg);
     }
   }, []);
 

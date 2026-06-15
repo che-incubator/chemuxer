@@ -1,4 +1,4 @@
-import { useRef, useEffect, useMemo } from 'react';
+import { useRef, useEffect, useMemo, useState } from 'react';
 import Editor, { type OnMount, type Monaco } from '@monaco-editor/react';
 import type { editor } from 'monaco-editor';
 import type { Settings } from '../../../shared/settings.js';
@@ -14,6 +14,7 @@ export function SettingsEditor({ settings, onSave, visible }: SettingsEditorProp
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const onSaveRef = useRef(onSave);
   onSaveRef.current = onSave;
+  const [saveError, setSaveError] = useState<string | null>(null);
   const settingsJson = useMemo(() => JSON.stringify(settings, null, 2), [settings]);
 
   const handleMount: OnMount = (editor, monaco) => {
@@ -39,8 +40,14 @@ export function SettingsEditor({ settings, onSave, visible }: SettingsEditorProp
       const value = editor.getValue();
       try {
         const parsed = JSON.parse(value);
-        onSaveRef.current(parsed);
+        onSaveRef.current(parsed).catch((err: Error) => {
+          setSaveError(err.message);
+        });
       } catch {}
+    });
+
+    editor.onDidChangeModelContent(() => {
+      setSaveError(null);
     });
   };
 
@@ -54,22 +61,30 @@ export function SettingsEditor({ settings, onSave, visible }: SettingsEditorProp
   }, [settingsJson]);
 
   return (
-    <div className="settings-editor" style={{ display: visible ? 'block' : 'none' }}>
-      <Editor
-        height="100%"
-        language="json"
-        theme={settings.terminal.theme.includes('mocha') ? 'vs-dark' : 'vs'}
-        value={settingsJson}
-        onMount={handleMount}
-        options={{
-          minimap: { enabled: false },
-          fontSize: 14,
-          lineNumbers: 'on',
-          scrollBeyondLastLine: false,
-          automaticLayout: true,
-          tabSize: 2,
-        }}
-      />
+    <div className="settings-editor" style={{ display: visible ? 'flex' : 'none', flexDirection: 'column' }}>
+      {saveError && (
+        <div className="settings-error">
+          <span>{saveError}</span>
+          <button onClick={() => setSaveError(null)}>&times;</button>
+        </div>
+      )}
+      <div style={{ flex: 1, overflow: 'hidden' }}>
+        <Editor
+          height="100%"
+          language="json"
+          theme={settings.terminal.theme.includes('mocha') ? 'vs-dark' : 'vs'}
+          value={settingsJson}
+          onMount={handleMount}
+          options={{
+            minimap: { enabled: false },
+            fontSize: 14,
+            lineNumbers: 'on',
+            scrollBeyondLastLine: false,
+            automaticLayout: true,
+            tabSize: 2,
+          }}
+        />
+      </div>
     </div>
   );
 }
