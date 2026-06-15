@@ -6,7 +6,7 @@ import { TabContextMenu } from './TabContextMenu.js';
 interface PaneTabBarProps {
   paneId: string;
   entries: TabEntry[];
-  activeEntry: TabEntry | null;
+  activeEntryIndex: number | null;
   sessions: SessionInfo[];
   onSelect: (sessionId: string) => void;
   onClose: (sessionId: string) => void;
@@ -21,15 +21,6 @@ interface PaneTabBarProps {
   onRenameConfirm?: (sessionId: string, title: string) => void;
   onRenameCancel?: () => void;
   zoomed?: boolean;
-}
-
-function isEntryActive(entry: TabEntry, activeEntry: TabEntry | null): boolean {
-  if (!activeEntry) return false;
-  if (entry.type !== activeEntry.type) return false;
-  if (entry.type === 'terminal' && activeEntry.type === 'terminal') {
-    return entry.sessionId === activeEntry.sessionId;
-  }
-  return true;
 }
 
 interface ContextMenuState {
@@ -79,7 +70,7 @@ function InlineRenameInput({
 export function PaneTabBar({
   paneId,
   entries,
-  activeEntry,
+  activeEntryIndex,
   sessions,
   onSelect,
   onClose,
@@ -99,7 +90,7 @@ export function PaneTabBar({
 
   return (
     <div className="tab-bar">
-      {entries.map((entry) => {
+      {entries.map((entry, index) => {
         if (entry.type === 'terminal') {
           const session = sessions.find((s) => s.id === entry.sessionId);
           if (!session) return null;
@@ -111,7 +102,7 @@ export function PaneTabBar({
               key={`terminal-${entry.sessionId}`}
               data-tab
               draggable={!isRenaming}
-              className={`tab ${isEntryActive(entry, activeEntry) ? 'tab-active' : ''}`}
+              className={`tab ${index === activeEntryIndex ? 'tab-active' : ''}`}
               onClick={() => onSelect(entry.sessionId)}
               onContextMenu={(e) => {
                 e.preventDefault();
@@ -162,7 +153,7 @@ export function PaneTabBar({
               key="settings"
               data-tab
               draggable
-              className={`tab ${isEntryActive(entry, activeEntry) ? 'tab-active' : ''}`}
+              className={`tab ${index === activeEntryIndex ? 'tab-active' : ''}`}
               onClick={() => onSelectSettings?.()}
               onContextMenu={(e) => {
                 e.preventDefault();

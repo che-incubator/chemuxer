@@ -10,7 +10,7 @@ function mockDeps(overrides: Partial<CommandDeps> = {}): CommandDeps {
     { type: 'terminal', sessionId: 'sess-2', tabNumber: 2 },
   ];
   const panes: Record<string, Pane> = {
-    'pane-0': { id: 'pane-0', entries, activeEntry: entries[0] },
+    'pane-0': { id: 'pane-0', entries, activeEntryIndex: 0 },
   };
   return {
     panes,
@@ -206,8 +206,8 @@ describe('useCommands', () => {
 
   it('Toggle Zoom Pane is shown when multiple panes exist', () => {
     const panes = {
-      'pane-0': { id: 'pane-0', entries: [{ type: 'terminal' as const, sessionId: 'sess-1', tabNumber: 1 }], activeEntry: { type: 'terminal' as const, sessionId: 'sess-1', tabNumber: 1 } },
-      'pane-1': { id: 'pane-1', entries: [{ type: 'terminal' as const, sessionId: 'sess-2', tabNumber: 2 }], activeEntry: { type: 'terminal' as const, sessionId: 'sess-2', tabNumber: 2 } },
+      'pane-0': { id: 'pane-0', entries: [{ type: 'terminal' as const, sessionId: 'sess-1', tabNumber: 1 }], activeEntryIndex: 0 },
+      'pane-1': { id: 'pane-1', entries: [{ type: 'terminal' as const, sessionId: 'sess-2', tabNumber: 2 }], activeEntryIndex: 0 },
     };
     const deps = mockDeps({ panes });
     const commands = useCommands(deps, DEFAULT_SETTINGS, vi.fn());
@@ -217,8 +217,8 @@ describe('useCommands', () => {
 
   it('Toggle Zoom Pane calls toggleZoom', () => {
     const panes = {
-      'pane-0': { id: 'pane-0', entries: [{ type: 'terminal' as const, sessionId: 'sess-1', tabNumber: 1 }], activeEntry: { type: 'terminal' as const, sessionId: 'sess-1', tabNumber: 1 } },
-      'pane-1': { id: 'pane-1', entries: [{ type: 'terminal' as const, sessionId: 'sess-2', tabNumber: 2 }], activeEntry: { type: 'terminal' as const, sessionId: 'sess-2', tabNumber: 2 } },
+      'pane-0': { id: 'pane-0', entries: [{ type: 'terminal' as const, sessionId: 'sess-1', tabNumber: 1 }], activeEntryIndex: 0 },
+      'pane-1': { id: 'pane-1', entries: [{ type: 'terminal' as const, sessionId: 'sess-2', tabNumber: 2 }], activeEntryIndex: 0 },
     };
     const deps = mockDeps({ panes });
     const commands = useCommands(deps, DEFAULT_SETTINGS, vi.fn());

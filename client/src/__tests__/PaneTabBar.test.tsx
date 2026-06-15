@@ -19,7 +19,7 @@ describe('PaneTabBar', () => {
       <PaneTabBar
         paneId="pane-1"
         entries={entries}
-        activeEntry={entries[0]}
+        activeEntryIndex={0}
         sessions={sessions}
         onSelect={() => {}}
         onClose={() => {}}
@@ -43,7 +43,7 @@ describe('PaneTabBar', () => {
       <PaneTabBar
         paneId="pane-1"
         entries={entries}
-        activeEntry={entries[0]}
+        activeEntryIndex={0}
         sessions={sessions}
         onSelect={onSelect}
         onClose={() => {}}
@@ -67,7 +67,7 @@ describe('PaneTabBar', () => {
       <PaneTabBar
         paneId="pane-1"
         entries={entries}
-        activeEntry={entries[0]}
+        activeEntryIndex={0}
         sessions={sessions}
         onSelect={() => {}}
         onClose={onClose}
@@ -89,7 +89,7 @@ describe('PaneTabBar', () => {
       <PaneTabBar
         paneId="pane-1"
         entries={entries}
-        activeEntry={entries[0]}
+        activeEntryIndex={0}
         sessions={sessions}
         onSelect={() => {}}
         onClose={() => {}}
@@ -109,7 +109,7 @@ describe('PaneTabBar', () => {
       <PaneTabBar
         paneId="pane-1"
         entries={entries}
-        activeEntry={entries[0]}
+        activeEntryIndex={0}
         sessions={sessions}
         onSelect={() => {}}
         onClose={() => {}}
@@ -133,7 +133,7 @@ describe('PaneTabBar', () => {
       <PaneTabBar
         paneId="pane-1"
         entries={entries}
-        activeEntry={entries[1]}
+        activeEntryIndex={1}
         sessions={sessions}
         onSelect={() => {}}
         onClose={() => {}}
@@ -159,7 +159,7 @@ describe('PaneTabBar', () => {
       <PaneTabBar
         paneId="pane-1"
         entries={entries}
-        activeEntry={entries[0]}
+        activeEntryIndex={0}
         sessions={sessions}
         onSelect={() => {}}
         onClose={() => {}}
@@ -182,7 +182,7 @@ describe('PaneTabBar', () => {
       <PaneTabBar
         paneId="pane-1"
         entries={entries}
-        activeEntry={entries[0]}
+        activeEntryIndex={0}
         sessions={sessions}
         onSelect={() => {}}
         onClose={() => {}}
@@ -204,7 +204,7 @@ describe('PaneTabBar', () => {
       <PaneTabBar
         paneId="pane-1"
         entries={entries}
-        activeEntry={entries[0]}
+        activeEntryIndex={0}
         sessions={sessions}
         onSelect={() => {}}
         onClose={() => {}}
@@ -230,7 +230,7 @@ describe('PaneTabBar', () => {
       <PaneTabBar
         paneId="pane-1"
         entries={entries}
-        activeEntry={entries[0]}
+        activeEntryIndex={0}
         sessions={sessions}
         onSelect={() => {}}
         onClose={() => {}}
@@ -261,7 +261,7 @@ describe('PaneTabBar', () => {
       <PaneTabBar
         paneId="pane-1"
         entries={entries}
-        activeEntry={entries[0]}
+        activeEntryIndex={0}
         sessions={sessions}
         onSelect={() => {}}
         onClose={() => {}}
@@ -288,7 +288,7 @@ describe('PaneTabBar', () => {
       <PaneTabBar
         paneId="pane-1"
         entries={entries}
-        activeEntry={entries[0]}
+        activeEntryIndex={0}
         sessions={renamedSessions}
         onSelect={() => {}}
         onClose={() => {}}
@@ -310,7 +310,7 @@ describe('PaneTabBar', () => {
       <PaneTabBar
         paneId="pane-1"
         entries={entries}
-        activeEntry={entries[0]}
+        activeEntryIndex={0}
         sessions={sessions}
         onSelect={() => {}}
         onClose={() => {}}
@@ -329,7 +329,7 @@ describe('PaneTabBar', () => {
       <PaneTabBar
         paneId="pane-1"
         entries={entries}
-        activeEntry={entries[0]}
+        activeEntryIndex={0}
         sessions={sessions}
         onSelect={() => {}}
         onClose={() => {}}
@@ -360,7 +360,7 @@ describe('PaneTabBar', () => {
       <PaneTabBar
         paneId="pane-1"
         entries={entries}
-        activeEntry={entries[0]}
+        activeEntryIndex={0}
         sessions={sessions}
         onSelect={() => {}}
         onClose={() => {}}
@@ -385,7 +385,7 @@ describe('PaneTabBar', () => {
       <PaneTabBar
         paneId="pane-1"
         entries={entries}
-        activeEntry={entries[0]}
+        activeEntryIndex={0}
         sessions={sessions}
         onSelect={() => {}}
         onClose={() => {}}
@@ -411,7 +411,7 @@ describe('PaneTabBar', () => {
       <PaneTabBar
         paneId="pane-1"
         entries={entries}
-        activeEntry={entries[0]}
+        activeEntryIndex={0}
         sessions={sessions}
         onSelect={() => {}}
         onClose={() => {}}
@@ -440,7 +440,7 @@ describe('PaneTabBar', () => {
       <PaneTabBar
         paneId="pane-1"
         entries={entries}
-        activeEntry={entries[0]}
+        activeEntryIndex={0}
         sessions={sessions}
         onSelect={() => {}}
         onClose={() => {}}
@@ -467,7 +467,7 @@ describe('PaneTabBar', () => {
       <PaneTabBar
         paneId="pane-1"
         entries={entries}
-        activeEntry={entries[0]}
+        activeEntryIndex={0}
         sessions={sessions}
         onSelect={() => {}}
         onClose={() => {}}
@@ -493,7 +493,7 @@ describe('PaneTabBar', () => {
       <PaneTabBar
         paneId="pane-1"
         entries={entries}
-        activeEntry={entries[0]}
+        activeEntryIndex={0}
         sessions={sessions}
         onSelect={() => {}}
         onClose={() => {}}
@@ -512,7 +512,7 @@ describe('PaneTabBar', () => {
       <PaneTabBar
         paneId="pane-1"
         entries={entries}
-        activeEntry={entries[0]}
+        activeEntryIndex={0}
         sessions={sessions}
         onSelect={() => {}}
         onClose={() => {}}
@@ -532,7 +532,7 @@ describe('PaneTabBar', () => {
       <PaneTabBar
         paneId="pane-1"
         entries={entries}
-        activeEntry={entries[0]}
+        activeEntryIndex={0}
         sessions={sessions}
         onSelect={() => {}}
         onClose={() => {}}
@@ -550,7 +550,7 @@ describe('PaneTabBar', () => {
       <PaneTabBar
         paneId="pane-1"
         entries={entries}
-        activeEntry={entries[0]}
+        activeEntryIndex={0}
         sessions={sessions}
         onSelect={() => {}}
         onClose={() => {}}

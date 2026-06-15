@@ -17,7 +17,7 @@ export type LayoutNode =
 export interface Pane {
   id: string;
   entries: TabEntry[];
-  activeEntry: TabEntry | null;
+  activeEntryIndex: number | null;
 }
 
 export type DragData =
