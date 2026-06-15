@@ -15,7 +15,7 @@ vi.mock('../hooks/useControl.js', () => ({
 vi.mock('../hooks/useLayout.js', () => ({
   useLayout: () => ({
     tree: { type: 'leaf', paneId: 'pane-0' },
-    panes: { 'pane-0': { id: 'pane-0', entries: [], activeEntry: null } },
+    panes: { 'pane-0': { id: 'pane-0', entries: [], activeEntryIndex: null } },
     focusedPaneId: 'pane-0',
     zoomedPaneId: null,
     splitPane: vi.fn(),

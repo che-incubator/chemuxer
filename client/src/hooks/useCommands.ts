@@ -32,7 +32,10 @@ export function useCommands(
   const { panes, focusedPaneId, zoomedPaneId, createSession, closeSession, openSettings } = deps;
 
   const focusedPane = focusedPaneId ? panes[focusedPaneId] : null;
-  const activeSessionId = focusedPane?.activeEntry?.type === 'terminal' ? focusedPane.activeEntry.sessionId : null;
+  const activeEntry = focusedPane?.activeEntryIndex !== null && focusedPane?.activeEntryIndex !== undefined
+    ? focusedPane.entries[focusedPane.activeEntryIndex]
+    : null;
+  const activeSessionId = activeEntry?.type === 'terminal' ? activeEntry.sessionId : null;
 
   return [
     {

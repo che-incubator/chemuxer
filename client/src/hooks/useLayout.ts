@@ -51,13 +51,6 @@ function getTerminalSessionIds(entries: TabEntry[]): string[] {
   return entries.filter((e): e is { type: 'terminal'; sessionId: string; tabNumber: number } => e.type === 'terminal').map(e => e.sessionId);
 }
 
-function tabEntryEquals(a: TabEntry | null, b: TabEntry | null): boolean {
-  if (a === null || b === null) return a === b;
-  if (a.type !== b.type) return false;
-  if (a.type === 'terminal' && b.type === 'terminal') return a.sessionId === b.sessionId;
-  return true; // both settings
-}
-
 export interface LayoutState {
   tree: LayoutNode;
   panes: Record<string, Pane>;
@@ -87,7 +80,7 @@ export function useLayout(deps: LayoutDeps): LayoutState {
 
   const [tree, setTree] = useState<LayoutNode>(() => ({ type: 'leaf', paneId: initialPaneId }));
   const [panes, setPanes] = useState<Record<string, Pane>>(() => ({
-    [initialPaneId]: { id: initialPaneId, entries: [], activeEntry: null },
+    [initialPaneId]: { id: initialPaneId, entries: [], activeEntryIndex: null },
   }));
   const [focusedPaneId, setFocusedPaneId] = useState<string | null>(initialPaneId);
   const [zoomedPaneId, setZoomedPaneId] = useState<string | null>(null);
@@ -118,10 +111,13 @@ export function useLayout(deps: LayoutDeps): LayoutState {
               for (const e of savedPane.entries) {
                 if (e.type === 'terminal' && e.tabNumber >= maxTabNum) maxTabNum = e.tabNumber + 1;
               }
+              const restoredIndex = savedPane.activeEntryIndex < savedPane.entries.length
+                ? savedPane.activeEntryIndex
+                : savedPane.entries.length > 0 ? 0 : null;
               restoredPanes[id] = {
                 id,
                 entries: savedPane.entries,
-                activeEntry: savedPane.entries[savedPane.activeEntryIndex] ?? savedPane.entries[0] ?? null,
+                activeEntryIndex: restoredIndex,
               };
             }
             nextPaneId = maxPaneNum;
@@ -156,7 +152,7 @@ export function useLayout(deps: LayoutDeps): LayoutState {
           updated[targetId] = {
             ...pane,
             entries: [...pane.entries, ...newEntries],
-            activeEntry: pane.activeEntry ?? newEntries[0],
+            activeEntryIndex: pane.activeEntryIndex ?? pane.entries.length,
           };
         }
       }
@@ -167,12 +163,20 @@ export function useLayout(deps: LayoutDeps): LayoutState {
             e.type !== 'terminal' || !removedSessionIds.has(e.sessionId)
           );
           if (newEntries.length !== pane.entries.length) {
+            let newActiveIndex: number | null = null;
+            if (pane.activeEntryIndex !== null) {
+              const prevActive = pane.entries[pane.activeEntryIndex];
+              if (prevActive) {
+                newActiveIndex = newEntries.indexOf(prevActive);
+                if (newActiveIndex === -1) {
+                  newActiveIndex = newEntries.length > 0 ? newEntries.length - 1 : null;
+                }
+              }
+            }
             updated[id] = {
               ...pane,
               entries: newEntries,
-              activeEntry: pane.activeEntry && newEntries.some((e) => tabEntryEquals(e, pane.activeEntry))
-                ? pane.activeEntry
-                : newEntries[newEntries.length - 1] ?? null,
+              activeEntryIndex: newActiveIndex,
             };
           }
         }
@@ -219,10 +223,15 @@ export function useLayout(deps: LayoutDeps): LayoutState {
     for (const [id, pane] of Object.entries(panes)) {
       const terminalEntries = pane.entries.filter((e) => e.type === 'terminal');
       if (terminalEntries.length === 0) continue;
-      const activeIndex = pane.activeEntry
-        ? terminalEntries.findIndex((e) => tabEntryEquals(e, pane.activeEntry))
-        : 0;
-      savedPanes[id] = { entries: terminalEntries, activeEntryIndex: Math.max(0, activeIndex) };
+      let activeIndex = 0;
+      if (pane.activeEntryIndex !== null) {
+        const activeEntry = pane.entries[pane.activeEntryIndex];
+        if (activeEntry) {
+          const idx = terminalEntries.indexOf(activeEntry);
+          if (idx !== -1) activeIndex = idx;
+        }
+      }
+      savedPanes[id] = { entries: terminalEntries, activeEntryIndex: activeIndex };
     }
     if (Object.keys(savedPanes).length === 0) return;
     localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify({
@@ -261,21 +270,29 @@ export function useLayout(deps: LayoutDeps): LayoutState {
 
         const updated = { ...prev };
 
-        const sourceEntry = sourcePane.entries.find(
+        const removedIndex = sourcePane.entries.findIndex(
           (e) => e.type === 'terminal' && e.sessionId === sessionId
-        ) as TabEntry;
-        const filteredEntries = sourcePane.entries.filter((e) =>
-          e.type !== 'terminal' || e.sessionId !== sessionId
         );
+        const sourceEntry = sourcePane.entries[removedIndex] as TabEntry;
+        const filteredEntries = sourcePane.entries.filter((_, i) => i !== removedIndex);
+
+        let newActiveIndex: number | null = null;
+        if (sourcePane.activeEntryIndex !== null) {
+          if (sourcePane.activeEntryIndex === removedIndex) {
+            newActiveIndex = filteredEntries.length > 0 ? filteredEntries.length - 1 : null;
+          } else if (sourcePane.activeEntryIndex > removedIndex) {
+            newActiveIndex = sourcePane.activeEntryIndex - 1;
+          } else {
+            newActiveIndex = sourcePane.activeEntryIndex;
+          }
+        }
         updated[sourcePaneId] = {
           ...sourcePane,
           entries: filteredEntries,
-          activeEntry: filteredEntries.some((e) => tabEntryEquals(e, sourcePane.activeEntry))
-            ? sourcePane.activeEntry
-            : filteredEntries[filteredEntries.length - 1] ?? null,
+          activeEntryIndex: newActiveIndex,
         };
 
-        updated[newPaneId] = { id: newPaneId, entries: [sourceEntry], activeEntry: sourceEntry };
+        updated[newPaneId] = { id: newPaneId, entries: [sourceEntry], activeEntryIndex: 0 };
 
         setTree((prevTree) => replaceLeaf(prevTree, targetPaneId, splitNode));
         setFocusedPaneId(newPaneId);
@@ -296,23 +313,31 @@ export function useLayout(deps: LayoutDeps): LayoutState {
         if (!source || !target) return prev;
 
         const updated = { ...prev };
-        const movedEntry = source.entries.find(
+        const removedIndex = source.entries.findIndex(
           (e) => e.type === 'terminal' && e.sessionId === sessionId
-        ) as TabEntry;
-        const filteredEntries = source.entries.filter((e) =>
-          e.type !== 'terminal' || e.sessionId !== sessionId
         );
+        const movedEntry = source.entries[removedIndex] as TabEntry;
+        const filteredEntries = source.entries.filter((_, i) => i !== removedIndex);
+
+        let newSourceActiveIndex: number | null = null;
+        if (source.activeEntryIndex !== null) {
+          if (source.activeEntryIndex === removedIndex) {
+            newSourceActiveIndex = filteredEntries.length > 0 ? filteredEntries.length - 1 : null;
+          } else if (source.activeEntryIndex > removedIndex) {
+            newSourceActiveIndex = source.activeEntryIndex - 1;
+          } else {
+            newSourceActiveIndex = source.activeEntryIndex;
+          }
+        }
         updated[sourcePaneId] = {
           ...source,
           entries: filteredEntries,
-          activeEntry: filteredEntries.some((e) => tabEntryEquals(e, source.activeEntry))
-            ? source.activeEntry
-            : filteredEntries[filteredEntries.length - 1] ?? null,
+          activeEntryIndex: newSourceActiveIndex,
         };
         updated[targetPaneId] = {
           ...target,
           entries: [...target.entries, movedEntry],
-          activeEntry: movedEntry,
+          activeEntryIndex: target.entries.length,
         };
         return updated;
       });
@@ -324,22 +349,21 @@ export function useLayout(deps: LayoutDeps): LayoutState {
     setPanes((prev) => {
       const pane = prev[paneId];
       if (!pane) return prev;
-      const entry = pane.entries.find((e): e is { type: 'terminal'; sessionId: string } =>
+      const index = pane.entries.findIndex((e) =>
         e.type === 'terminal' && e.sessionId === sessionId
       );
-      if (!entry) return prev;
-      return { ...prev, [paneId]: { ...pane, activeEntry: entry } };
+      if (index === -1) return prev;
+      return { ...prev, [paneId]: { ...pane, activeEntryIndex: index } };
     });
   }, []);
 
   const openSettings = useCallback(() => {
     setPanes((prev) => {
-      const settingsEntry: TabEntry = { type: 'settings' };
-
       // Check if any pane already has settings open
       for (const [paneId, pane] of Object.entries(prev)) {
-        if (pane.entries.some((e) => e.type === 'settings')) {
-          return { ...prev, [paneId]: { ...pane, activeEntry: settingsEntry } };
+        const settingsIndex = pane.entries.findIndex((e) => e.type === 'settings');
+        if (settingsIndex !== -1) {
+          return { ...prev, [paneId]: { ...pane, activeEntryIndex: settingsIndex } };
         }
       }
 
@@ -348,12 +372,13 @@ export function useLayout(deps: LayoutDeps): LayoutState {
       if (!targetId || !prev[targetId]) return prev;
 
       const pane = prev[targetId];
+      const settingsEntry: TabEntry = { type: 'settings' };
       return {
         ...prev,
         [targetId]: {
           ...pane,
           entries: [...pane.entries, settingsEntry],
-          activeEntry: settingsEntry,
+          activeEntryIndex: pane.entries.length,
         },
       };
     });
@@ -363,9 +388,9 @@ export function useLayout(deps: LayoutDeps): LayoutState {
     setPanes((prev) => {
       const pane = prev[paneId];
       if (!pane) return prev;
-      const settingsEntry = pane.entries.find((e) => e.type === 'settings');
-      if (!settingsEntry) return prev;
-      return { ...prev, [paneId]: { ...pane, activeEntry: settingsEntry } };
+      const settingsIndex = pane.entries.findIndex((e) => e.type === 'settings');
+      if (settingsIndex === -1) return prev;
+      return { ...prev, [paneId]: { ...pane, activeEntryIndex: settingsIndex } };
     });
   }, []);
 
@@ -377,19 +402,31 @@ export function useLayout(deps: LayoutDeps): LayoutState {
       if (!source || !target) return prev;
       if (target.entries.some((e) => e.type === 'settings')) return prev;
 
+      const settingsIndex = source.entries.findIndex((e) => e.type === 'settings');
+      const filteredEntries = source.entries.filter((e) => e.type !== 'settings');
+      const wasActive = source.activeEntryIndex === settingsIndex;
+
+      let newSourceActiveIndex: number | null = null;
+      if (wasActive) {
+        // Fall back to last non-settings entry
+        newSourceActiveIndex = filteredEntries.length > 0 ? filteredEntries.length - 1 : null;
+      } else if (source.activeEntryIndex !== null) {
+        newSourceActiveIndex = source.activeEntryIndex > settingsIndex
+          ? source.activeEntryIndex - 1
+          : source.activeEntryIndex;
+      }
+
       const settingsEntry: TabEntry = { type: 'settings' };
       const updated = { ...prev };
       updated[sourcePaneId] = {
         ...source,
-        entries: source.entries.filter((e) => e.type !== 'settings'),
-        activeEntry: source.activeEntry?.type === 'settings'
-          ? source.entries.find((e) => e.type !== 'settings') ?? null
-          : source.activeEntry,
+        entries: filteredEntries,
+        activeEntryIndex: newSourceActiveIndex,
       };
       updated[targetPaneId] = {
         ...target,
         entries: [...target.entries, settingsEntry],
-        activeEntry: settingsEntry,
+        activeEntryIndex: target.entries.length,
       };
       return updated;
     });
@@ -420,18 +457,29 @@ export function useLayout(deps: LayoutDeps): LayoutState {
         const source = prev[sourcePaneId];
         if (!source) return prev;
 
+        const settingsIndex = source.entries.findIndex((e) => e.type === 'settings');
+        const filteredEntries = source.entries.filter((e) => e.type !== 'settings');
+        const wasActive = source.activeEntryIndex === settingsIndex;
+
+        let newSourceActiveIndex: number | null = null;
+        if (wasActive) {
+          newSourceActiveIndex = filteredEntries.length > 0 ? filteredEntries.length - 1 : null;
+        } else if (source.activeEntryIndex !== null) {
+          newSourceActiveIndex = source.activeEntryIndex > settingsIndex
+            ? source.activeEntryIndex - 1
+            : source.activeEntryIndex;
+        }
+
         const settingsEntry: TabEntry = { type: 'settings' };
         const updated = { ...prev };
 
         updated[sourcePaneId] = {
           ...source,
-          entries: source.entries.filter((e) => e.type !== 'settings'),
-          activeEntry: source.activeEntry?.type === 'settings'
-            ? source.entries.find((e) => e.type !== 'settings') ?? null
-            : source.activeEntry,
+          entries: filteredEntries,
+          activeEntryIndex: newSourceActiveIndex,
         };
 
-        updated[newPaneId] = { id: newPaneId, entries: [settingsEntry], activeEntry: settingsEntry };
+        updated[newPaneId] = { id: newPaneId, entries: [settingsEntry], activeEntryIndex: 0 };
 
         return updated;
       });
@@ -447,15 +495,27 @@ export function useLayout(deps: LayoutDeps): LayoutState {
       const pane = prev[paneId];
       if (!pane) return prev;
 
+      const settingsIndex = pane.entries.findIndex((e) => e.type === 'settings');
+      if (settingsIndex === -1) return prev;
+
       const filteredEntries = pane.entries.filter((e) => e.type !== 'settings');
+      const wasActive = pane.activeEntryIndex === settingsIndex;
+
+      let newActiveIndex: number | null = null;
+      if (wasActive) {
+        newActiveIndex = filteredEntries.length > 0 ? filteredEntries.length - 1 : null;
+      } else if (pane.activeEntryIndex !== null) {
+        newActiveIndex = pane.activeEntryIndex > settingsIndex
+          ? pane.activeEntryIndex - 1
+          : pane.activeEntryIndex;
+      }
+
       return {
         ...prev,
         [paneId]: {
           ...pane,
           entries: filteredEntries,
-          activeEntry: filteredEntries.some((e) => tabEntryEquals(e, pane.activeEntry))
-            ? pane.activeEntry
-            : filteredEntries[filteredEntries.length - 1] ?? null,
+          activeEntryIndex: newActiveIndex,
         },
       };
     });
@@ -479,7 +539,7 @@ export function useLayout(deps: LayoutDeps): LayoutState {
 
       setPanes((prev) => ({
         ...prev,
-        [newPaneId]: { id: newPaneId, entries: [], activeEntry: null },
+        [newPaneId]: { id: newPaneId, entries: [], activeEntryIndex: null },
       }));
 
       setPendingPaneIds((prev) => new Set([...prev, newPaneId]));

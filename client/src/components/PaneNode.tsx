@@ -128,7 +128,7 @@ export function PaneNode({
       <PaneTabBar
         paneId={pane.id}
         entries={pane.entries}
-        activeEntry={pane.activeEntry}
+        activeEntryIndex={pane.activeEntryIndex}
         sessions={sessions}
         onSelect={handleSelect}
         onClose={onCloseSession}
@@ -151,26 +151,24 @@ export function PaneNode({
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
       >
-        {pane.entries.map((entry) => {
+        {pane.entries.map((entry, index) => {
           if (entry.type === 'terminal') {
-            const isActive = pane.activeEntry?.type === 'terminal' && pane.activeEntry.sessionId === entry.sessionId;
             return (
               <Terminal
                 key={`terminal-${entry.sessionId}`}
                 sessionId={entry.sessionId}
                 wsUrl={wsUrl}
                 settings={settings}
-                visible={isActive}
+                visible={index === pane.activeEntryIndex}
               />
             );
           } else {
-            const isActive = pane.activeEntry?.type === 'settings';
             return (
               <SettingsEditor
                 key="settings"
                 settings={settings}
                 onSave={onSaveSettings}
-                visible={isActive}
+                visible={index === pane.activeEntryIndex}
               />
             );
           }

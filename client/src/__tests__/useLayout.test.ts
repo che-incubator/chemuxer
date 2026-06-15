@@ -34,7 +34,9 @@ describe('useLayout', () => {
   }
 
   function getActiveSessionId(pane: any): string {
-    return pane.activeEntry?.type === 'terminal' ? pane.activeEntry.sessionId : '';
+    if (pane.activeEntryIndex === null || pane.activeEntryIndex === undefined) return '';
+    const entry = pane.entries[pane.activeEntryIndex];
+    return entry?.type === 'terminal' ? entry.sessionId : '';
   }
 
   async function setupWithSessions(sessions: SessionInfo[]) {
