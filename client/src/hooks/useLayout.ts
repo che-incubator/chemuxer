@@ -111,9 +111,12 @@ export function useLayout(deps: LayoutDeps): LayoutState {
               for (const e of savedPane.entries) {
                 if (e.type === 'terminal' && e.tabNumber >= maxTabNum) maxTabNum = e.tabNumber + 1;
               }
-              const restoredIndex = savedPane.activeEntryIndex < savedPane.entries.length
-                ? savedPane.activeEntryIndex
-                : savedPane.entries.length > 0 ? 0 : null;
+              const restoredIndex =
+                Number.isInteger(savedPane.activeEntryIndex) &&
+                savedPane.activeEntryIndex >= 0 &&
+                savedPane.activeEntryIndex < savedPane.entries.length
+                  ? savedPane.activeEntryIndex
+                  : savedPane.entries.length > 0 ? 0 : null;
               restoredPanes[id] = {
                 id,
                 entries: savedPane.entries,
@@ -312,10 +315,12 @@ export function useLayout(deps: LayoutDeps): LayoutState {
         const target = prev[targetPaneId];
         if (!source || !target) return prev;
 
-        const updated = { ...prev };
         const removedIndex = source.entries.findIndex(
           (e) => e.type === 'terminal' && e.sessionId === sessionId
         );
+        if (removedIndex === -1) return prev;
+
+        const updated = { ...prev };
         const movedEntry = source.entries[removedIndex] as TabEntry;
         const filteredEntries = source.entries.filter((_, i) => i !== removedIndex);
 
@@ -403,12 +408,13 @@ export function useLayout(deps: LayoutDeps): LayoutState {
       if (target.entries.some((e) => e.type === 'settings')) return prev;
 
       const settingsIndex = source.entries.findIndex((e) => e.type === 'settings');
+      if (settingsIndex === -1) return prev;
+
       const filteredEntries = source.entries.filter((e) => e.type !== 'settings');
       const wasActive = source.activeEntryIndex === settingsIndex;
 
       let newSourceActiveIndex: number | null = null;
       if (wasActive) {
-        // Fall back to last non-settings entry
         newSourceActiveIndex = filteredEntries.length > 0 ? filteredEntries.length - 1 : null;
       } else if (source.activeEntryIndex !== null) {
         newSourceActiveIndex = source.activeEntryIndex > settingsIndex
@@ -439,6 +445,9 @@ export function useLayout(deps: LayoutDeps): LayoutState {
         return;
       }
 
+      const sourcePane = panes[sourcePaneId];
+      if (!sourcePane || !sourcePane.entries.some((e) => e.type === 'settings')) return;
+
       const newPaneId = generatePaneId();
       const direction = dropZoneToDirection(zone);
       const isFirst = zone === 'left' || zone === 'top';
@@ -458,6 +467,7 @@ export function useLayout(deps: LayoutDeps): LayoutState {
         if (!source) return prev;
 
         const settingsIndex = source.entries.findIndex((e) => e.type === 'settings');
+        if (settingsIndex === -1) return prev;
         const filteredEntries = source.entries.filter((e) => e.type !== 'settings');
         const wasActive = source.activeEntryIndex === settingsIndex;
 
@@ -487,7 +497,7 @@ export function useLayout(deps: LayoutDeps): LayoutState {
       setTree((prev) => replaceLeaf(prev, targetPaneId, splitNode));
       setFocusedPaneId(newPaneId);
     },
-    [moveSettings]
+    [moveSettings, panes]
   );
 
   const closeSettings = useCallback((paneId: string) => {
