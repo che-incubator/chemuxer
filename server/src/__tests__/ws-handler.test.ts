@@ -53,7 +53,8 @@ describe('WebSocket Handler', { timeout: 30000 }, () => {
     manager = new SessionManager(mockSettingsManager as any);
     const app = express();
     server = http.createServer(app);
-    setupWebSocketServer(server, manager, mockSettingsManager as any);
+    const { broadcastControl } = setupWebSocketServer(server, manager, mockSettingsManager as any);
+    manager.setBroadcastControl(broadcastControl);
     await new Promise<void>((resolve) => server.listen(0, resolve));
   });
 

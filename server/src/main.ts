@@ -19,6 +19,7 @@ const server = http.createServer(app);
 const manager = new SessionManager(settingsManager);
 
 const { broadcastControl } = setupWebSocketServer(server, manager, settingsManager);
+manager.setBroadcastControl(broadcastControl);
 
 const feedCollector = new FeedCollector(manager, {
   intervalMs: parseInt(process.env.FEED_INTERVAL_MS ?? '', 10) || 60000,
@@ -75,11 +76,7 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
 });
 
 // Create a default session so the user sees a terminal immediately
-const initialSession = manager.createSession();
-initialSession.onExit((exitCode) => {
-  manager.closeSession(initialSession.id);
-  broadcastControl({ type: 'session-closed', sessionId: initialSession.id, exitCode });
-});
+manager.createSession();
 
 server.listen(PORT, HOST, () => {
   console.log(`chemuxer listening on http://${HOST}:${PORT}`);

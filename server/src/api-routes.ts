@@ -101,11 +101,6 @@ export function createApiRouter(
       next(err);
       return;
     }
-    session.onExit((exitCode) => {
-      manager.closeSession(session.id);
-      broadcastControl({ type: 'session-closed', sessionId: session.id, exitCode });
-    });
-    broadcastControl({ type: 'session-created', session: session.toInfo() });
     res.status(201).json(session.toInfo());
   });
 

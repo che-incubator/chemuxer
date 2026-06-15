@@ -28,6 +28,7 @@ describe('API Routes', { timeout: 30000 }, () => {
     manager = new SessionManager(mockSettingsManager());
     feedCollector = new FeedCollector(manager, { intervalMs: 60000, maxEntries: 10 });
     const broadcastControl = (data: object) => { broadcasts.push(data); };
+    manager.setBroadcastControl(broadcastControl);
 
     const app = express();
     app.use(express.json());
