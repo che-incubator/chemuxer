@@ -2,7 +2,7 @@ import { useRef, useEffect } from 'react';
 import Editor, { type OnMount, type Monaco } from '@monaco-editor/react';
 import type { editor } from 'monaco-editor';
 import type { Settings } from '../../../shared/settings.js';
-import { basePath } from '../hooks/useSettings.js';
+import { basePath } from '../utils/basePath.js';
 
 interface SettingsEditorProps {
   settings: Settings;

@@ -1,14 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { DEFAULT_SETTINGS, type Settings } from '../../../shared/settings.js';
+import { basePath } from '../utils/basePath.js';
 
 export interface SettingsState {
   settings: Settings;
   updateSettings: (settings: Settings) => Promise<void>;
   applySettingsChanged: (settings: Settings) => void;
-}
-
-export function basePath(): string {
-  return new URL('.', document.baseURI).pathname.replace(/\/+$/, '');
 }
 
 export function useSettings(): SettingsState {
