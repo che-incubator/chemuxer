@@ -70,7 +70,11 @@ app.get(/^(?!\/api\/)/, (_req, res) => {
 });
 
 // Global error handler — log internally, never expose details to client
-app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+app.use((err: Error & { status?: number }, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  if (err instanceof SyntaxError && err.status === 400) {
+    res.status(400).json({ error: 'Malformed JSON' });
+    return;
+  }
   console.error(err);
   res.status(500).json({ error: 'Internal server error' });
 });

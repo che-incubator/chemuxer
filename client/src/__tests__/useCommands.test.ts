@@ -91,7 +91,7 @@ describe('useCommands', () => {
   });
 
   it('Select Color Theme child action calls updateSettings', () => {
-    const updateSettings = vi.fn();
+    const updateSettings = vi.fn().mockResolvedValue(undefined);
     const commands = useCommands(mockDeps(), DEFAULT_SETTINGS, updateSettings);
     const cmd = commands.find((c) => c.label === 'Select Color Theme')!;
     const latteChild = cmd.children!.find(c => c.label === 'catppuccin-latte')!;
