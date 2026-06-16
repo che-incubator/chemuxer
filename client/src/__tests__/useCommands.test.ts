@@ -163,38 +163,34 @@ describe('useCommands', () => {
     expect(deps.createSplitSession).not.toHaveBeenCalled();
   });
 
-  it('New Terminal is no-op when zoomed', () => {
+  it('New Terminal is disabled when zoomed', () => {
     const deps = mockDeps({ zoomedPaneId: 'pane-0' });
     const commands = useCommands(deps, DEFAULT_SETTINGS, vi.fn());
     const cmd = commands.find((c) => c.label === 'New Terminal')!;
-    cmd.action!();
-    expect(deps.createSession).not.toHaveBeenCalled();
+    expect(cmd.disabled).toBe(true);
   });
 
-  it('Close Terminal is no-op when zoomed', () => {
+  it('Close Terminal is disabled when zoomed', () => {
     const deps = mockDeps({ zoomedPaneId: 'pane-0' });
     const commands = useCommands(deps, DEFAULT_SETTINGS, vi.fn());
     const cmd = commands.find((c) => c.label === 'Close Terminal')!;
-    cmd.action!();
-    expect(deps.closeSession).not.toHaveBeenCalled();
+    expect(cmd.disabled).toBe(true);
   });
 
-  it('Split commands are no-ops when zoomed', () => {
+  it('Split commands are disabled when zoomed', () => {
     const deps = mockDeps({ zoomedPaneId: 'pane-0' });
     const commands = useCommands(deps, DEFAULT_SETTINGS, vi.fn());
     for (const label of ['Split Right', 'Split Left', 'Split Down', 'Split Up']) {
       const cmd = commands.find((c) => c.label === label)!;
-      cmd.action!();
+      expect(cmd.disabled).toBe(true);
     }
-    expect(deps.createSplitSession).not.toHaveBeenCalled();
   });
 
-  it('Open Settings is no-op when zoomed', () => {
+  it('Open Settings is disabled when zoomed', () => {
     const deps = mockDeps({ zoomedPaneId: 'pane-0' });
     const commands = useCommands(deps, DEFAULT_SETTINGS, vi.fn());
     const cmd = commands.find((c) => c.label === 'Open Settings')!;
-    cmd.action!();
-    expect(deps.openSettings).not.toHaveBeenCalled();
+    expect(cmd.disabled).toBe(true);
   });
 
   it('Toggle Zoom Pane is hidden when only one pane exists', () => {

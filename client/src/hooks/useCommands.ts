@@ -4,6 +4,7 @@ import { THEMES, type Settings, type ThemeName } from '../../../shared/settings.
 export interface Command {
   id: string;
   label: string;
+  disabled?: boolean;
   action?: () => void;
   children?: Command[];
 }
@@ -37,48 +38,41 @@ export function useCommands(
     : null;
   const activeSessionId = activeEntry?.type === 'terminal' ? activeEntry.sessionId : null;
 
+  const zoomed = !!zoomedPaneId;
+
   return [
     {
       id: 'new-terminal',
       label: 'New Terminal',
-      action: () => {
-        if (zoomedPaneId) return;
-        createSession();
-      },
+      disabled: zoomed,
+      action: () => createSession(),
     },
     {
       id: 'rename-terminal',
       label: 'Rename Terminal',
+      disabled: !activeSessionId,
       action: () => {
-        if (activeSessionId) {
-          options?.onRenameRequest?.(activeSessionId);
-        }
+        if (activeSessionId) options?.onRenameRequest?.(activeSessionId);
       },
     },
     ...(Object.keys(panes).length > 1 ? [{
       id: 'toggle-zoom',
       label: 'Toggle Zoom Pane',
-      action: () => {
-        deps.toggleZoom();
-      },
+      action: () => deps.toggleZoom(),
     }] : []),
     {
       id: 'close-terminal',
       label: 'Close Terminal',
+      disabled: zoomed || !activeSessionId,
       action: () => {
-        if (zoomedPaneId) return;
-        if (activeSessionId) {
-          closeSession(activeSessionId);
-        }
+        if (activeSessionId) closeSession(activeSessionId);
       },
     },
     {
       id: 'open-settings',
       label: 'Open Settings',
-      action: () => {
-        if (zoomedPaneId) return;
-        openSettings();
-      },
+      disabled: zoomed,
+      action: () => openSettings(),
     },
     {
       id: 'select-theme',
@@ -94,42 +88,26 @@ export function useCommands(
     {
       id: 'split-right',
       label: 'Split Right',
-      action: () => {
-        if (zoomedPaneId) return;
-        if (focusedPaneId) {
-          deps.createSplitSession(focusedPaneId, 'right');
-        }
-      },
+      disabled: zoomed,
+      action: () => { if (focusedPaneId) deps.createSplitSession(focusedPaneId, 'right'); },
     },
     {
       id: 'split-left',
       label: 'Split Left',
-      action: () => {
-        if (zoomedPaneId) return;
-        if (focusedPaneId) {
-          deps.createSplitSession(focusedPaneId, 'left');
-        }
-      },
+      disabled: zoomed,
+      action: () => { if (focusedPaneId) deps.createSplitSession(focusedPaneId, 'left'); },
     },
     {
       id: 'split-down',
       label: 'Split Down',
-      action: () => {
-        if (zoomedPaneId) return;
-        if (focusedPaneId) {
-          deps.createSplitSession(focusedPaneId, 'bottom');
-        }
-      },
+      disabled: zoomed,
+      action: () => { if (focusedPaneId) deps.createSplitSession(focusedPaneId, 'bottom'); },
     },
     {
       id: 'split-up',
       label: 'Split Up',
-      action: () => {
-        if (zoomedPaneId) return;
-        if (focusedPaneId) {
-          deps.createSplitSession(focusedPaneId, 'top');
-        }
-      },
+      disabled: zoomed,
+      action: () => { if (focusedPaneId) deps.createSplitSession(focusedPaneId, 'top'); },
     },
   ];
 }
