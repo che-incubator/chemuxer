@@ -6,13 +6,24 @@ import type { SessionInfo } from '../../../shared/protocol.js';
 
 function createMockSession(id: string, state: string): { session: Partial<Session>; setState: (s: string) => void } {
   let currentState = state;
+  const dataListeners: Array<(data: string) => void> = [];
   return {
     session: {
       id,
       getState: () => currentState,
       toInfo: () => ({ id, shell: '/bin/sh', title: 'sh', renamed: false, createdAt: Date.now() }),
+      onData: (cb: (data: string) => void) => {
+        dataListeners.push(cb);
+        return () => {
+          const idx = dataListeners.indexOf(cb);
+          if (idx !== -1) dataListeners.splice(idx, 1);
+        };
+      },
     },
-    setState: (s: string) => { currentState = s; },
+    setState: (s: string) => {
+      currentState = s;
+      for (const cb of dataListeners) cb(s);
+    },
   };
 }
 
@@ -235,5 +246,21 @@ describe('FeedCollector', () => {
     const feed2 = collector.getSessionFeed('s1', nextSince);
     expect(feed2.entries).toHaveLength(1);
     expect(feed2.entries[0].content).toBe('v2');
+  });
+
+  it('skips idle sessions that had no new data between ticks', () => {
+    const { manager, addSession } = createMockManager();
+    addSession('s1', '$ prompt');
+    collector = new FeedCollector(manager, { intervalMs: 1000, maxEntries: 10 });
+
+    // First tick: new session is always processed
+    collector.tick();
+    const feed1 = collector.getSessionFeed('s1', '1970-01-01T00:00:00.000Z');
+    expect(feed1.entries).toHaveLength(1);
+
+    // Second tick: no onData fired, session is idle — should not add a new entry
+    collector.tick();
+    const feed2 = collector.getSessionFeed('s1', '1970-01-01T00:00:00.000Z');
+    expect(feed2.entries).toHaveLength(1);
   });
 });
