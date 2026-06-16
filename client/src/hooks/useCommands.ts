@@ -50,7 +50,7 @@ export function useCommands(
     {
       id: 'rename-terminal',
       label: 'Rename Terminal',
-      disabled: !activeSessionId,
+      disabled: zoomed || !activeSessionId,
       action: () => {
         if (activeSessionId) options?.onRenameRequest?.(activeSessionId);
       },
