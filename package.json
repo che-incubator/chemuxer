@@ -11,7 +11,7 @@
     "build:all": "npm run build:bundle && npm run build:client",
     "start": "node dist/server/main.js",
     "start:bundle": "node dist/server/server.js",
-    "lint": "eslint 'server/src/**/*.ts' 'client/src/**/*.ts' 'client/src/**/*.tsx' 'shared/**/*.ts'",
+    "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
     "docker:build": "docker build -t chemuxer .",

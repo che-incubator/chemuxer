@@ -1,14 +1,9 @@
-import { Router, type Request } from 'express';
+import { Router } from 'express';
 import type { SessionManager } from './session-manager.js';
 import { SessionLimitError } from './session-manager.js';
 import type { FeedCollector } from './feed-collector.js';
-import type { Session } from './session.js';
 import { stripAnsi } from './strip-ansi.js';
 import type { ServerControlMessage } from '../../shared/protocol.js';
-
-interface SessionRequest extends Request {
-  session: Session;
-}
 
 const AGENTS_MD = `# Chemuxer — Agent Instructions
 
@@ -96,7 +91,7 @@ export function createApiRouter(
       res.status(404).json({ error: 'Session not found', status: 404 });
       return;
     }
-    (req as SessionRequest).session = session;
+    req.session! = session;
     next();
   });
 
@@ -121,7 +116,7 @@ export function createApiRouter(
   });
 
   router.get('/api/sessions/:id', (req, res) => {
-    res.json((req as SessionRequest).session.toInfo());
+    res.json(req.session!.toInfo());
   });
 
   router.delete('/api/sessions/:id', (req, res) => {
@@ -136,7 +131,7 @@ export function createApiRouter(
       res.status(400).json({ error: 'title must be a string', status: 400 });
       return;
     }
-    const session = (req as SessionRequest).session;
+    const session = req.session!;
     session.rename(title);
     const info = session.toInfo();
     broadcastControl({ type: 'session-renamed', sessionId: info.id, title: info.title, renamed: info.renamed });
@@ -145,7 +140,7 @@ export function createApiRouter(
 
   // --- Terminal I/O ---
   router.get('/api/sessions/:id/buffer', (req, res) => {
-    const content = stripAnsi((req as SessionRequest).session.getState());
+    const content = stripAnsi(req.session!.getState());
     res.json({ content });
   });
 
@@ -155,7 +150,7 @@ export function createApiRouter(
       res.status(400).json({ error: 'data must be a string', status: 400 });
       return;
     }
-    (req as SessionRequest).session.write(data);
+    req.session!.write(data);
     res.json({ ok: true });
   });
 
