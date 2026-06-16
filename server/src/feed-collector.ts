@@ -52,6 +52,7 @@ export class FeedCollector {
       dispose();
     }
     this.disposeListeners.clear();
+    this.dirtySessionIds.clear();
   }
 
   tick(): void {
@@ -83,6 +84,7 @@ export class FeedCollector {
       if (!activeIds.has(id)) {
         dispose();
         this.disposeListeners.delete(id);
+        this.dirtySessionIds.delete(id);
       }
     }
 
