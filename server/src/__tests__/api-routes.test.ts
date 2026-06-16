@@ -275,4 +275,27 @@ describe('API Routes', { timeout: 30000 }, () => {
     const body = await res.json();
     expect(body).toHaveLength(2);
   });
+
+  // --- Settings ---
+  it('GET /api/settings returns current settings', async () => {
+    const res = await fetch(`${baseUrl}/api/settings`);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body).toEqual(DEFAULT_SETTINGS);
+  });
+
+  it('PUT /api/settings returns updated settings', async () => {
+    const res = await fetch(`${baseUrl}/api/settings`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ terminal: { fontSize: 16 } }),
+    });
+    expect(res.status).toBe(200);
+  });
+
+  it('GET /api/settings/schema returns JSON schema', async () => {
+    const res = await fetch(`${baseUrl}/api/settings/schema`);
+    expect(res.status).toBe(200);
+    expect(res.headers.get('content-type')).toContain('application/json');
+  });
 });
