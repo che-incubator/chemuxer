@@ -27,6 +27,8 @@ export class FeedCollector {
   private readonly maxEntries: number;
   private readonly staleMs: number;
   private lastTimestamp: string = new Date(0).toISOString();
+  private dirtySessionIds = new Set<string>();
+  private disposeListeners = new Map<string, () => void>();
 
   constructor(
     private manager: SessionManager,
@@ -46,6 +48,11 @@ export class FeedCollector {
       clearInterval(this.timer);
       this.timer = null;
     }
+    for (const dispose of this.disposeListeners.values()) {
+      dispose();
+    }
+    this.disposeListeners.clear();
+    this.dirtySessionIds.clear();
   }
 
   tick(): void {
@@ -57,7 +64,34 @@ export class FeedCollector {
       this.lastSeen.set(id, now);
     }
 
+    // Register onData listeners for new sessions
     for (const info of sessions) {
+      if (!this.disposeListeners.has(info.id)) {
+        const session = this.manager.getSession(info.id);
+        if (session) {
+          const dispose = session.onData(() => {
+            this.dirtySessionIds.add(info.id);
+          });
+          this.disposeListeners.set(info.id, dispose);
+          // Mark new sessions as dirty so their first tick is processed
+          this.dirtySessionIds.add(info.id);
+        }
+      }
+    }
+
+    // Dispose listeners for removed sessions
+    for (const [id, dispose] of this.disposeListeners) {
+      if (!activeIds.has(id)) {
+        dispose();
+        this.disposeListeners.delete(id);
+        this.dirtySessionIds.delete(id);
+      }
+    }
+
+    for (const info of sessions) {
+      if (!this.dirtySessionIds.has(info.id)) continue;
+      this.dirtySessionIds.delete(info.id);
+
       const session = this.manager.getSession(info.id);
       if (!session) continue;
 
