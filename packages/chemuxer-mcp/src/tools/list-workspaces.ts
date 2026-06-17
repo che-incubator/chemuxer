@@ -20,9 +20,10 @@ export function registerListWorkspaces(server: McpServer, store: WorkspaceStore)
         idled: ws.idled,
         endpoint: ws.endpoint,
         ...((!ws.ready || ws.idled) && {
-          reason: ws.idled
-            ? 'Workspace is idled'
-            : `Workspace is not ready (phase: ${ws.phase})`,
+          reason: [
+            ws.idled && 'Workspace is idled',
+            !ws.ready && `Workspace is not ready (phase: ${ws.phase})`,
+          ].filter(Boolean).join('; '),
         }),
       }));
 

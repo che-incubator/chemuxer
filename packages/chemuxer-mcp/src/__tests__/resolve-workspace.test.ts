@@ -37,6 +37,16 @@ const notReadyWorkspace: WorkspaceInfo = {
   endpoint: null,
 };
 
+const readyNoEndpoint: WorkspaceInfo = {
+  workspace_id: 'ws-id-4',
+  workspace_name: 'no-ip-ws',
+  pod_name: 'no-ip-ws-pod',
+  phase: 'Running',
+  ready: true,
+  idled: false,
+  endpoint: null,
+};
+
 describe('resolveWorkspace', () => {
   it('returns WorkspaceInfo for a ready workspace', () => {
     const store = makeStore(new Map([['my-workspace', readyWorkspace]]));
@@ -75,6 +85,17 @@ describe('resolveWorkspace', () => {
       expect(err).toBeInstanceOf(ToolError);
       expect((err as ToolError).errorCode).toBe('WORKSPACE_NOT_READY');
       expect((err as ToolError).message).toContain('Pending');
+    }
+  });
+
+  it('throws WORKSPACE_UNREACHABLE for ready workspace without endpoint', () => {
+    const store = makeStore(new Map([['no-ip-ws', readyNoEndpoint]]));
+    expect(() => resolveWorkspace(store, 'no-ip-ws')).toThrow(ToolError);
+    try {
+      resolveWorkspace(store, 'no-ip-ws');
+    } catch (err) {
+      expect(err).toBeInstanceOf(ToolError);
+      expect((err as ToolError).errorCode).toBe('WORKSPACE_UNREACHABLE');
     }
   });
 });
