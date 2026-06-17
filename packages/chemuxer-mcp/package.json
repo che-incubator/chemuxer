@@ -12,7 +12,9 @@
   },
   "dependencies": {
     "@chemuxer/shared": "*",
-    "@kubernetes/client-node": "^1.4.0"
+    "@kubernetes/client-node": "^1.4.0",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/node": "^25.9.2",
