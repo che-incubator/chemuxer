@@ -41,8 +41,8 @@ export function resolveChemuxerPort(pod: k8s.V1Pod, defaultPort: number): number
   if (firstContainer) {
     for (const env of firstContainer.env ?? []) {
       if (env.name === 'CHEMUXER_PORT' && env.value) {
-        const parsed = parseInt(env.value, 10);
-        if (!isNaN(parsed) && parsed > 0) {
+        const parsed = Number(env.value);
+        if (Number.isInteger(parsed) && parsed >= 1 && parsed <= 65535) {
           return parsed;
         }
       }
@@ -165,13 +165,15 @@ export class WorkspaceStore {
 
     this.informer.on('error', (err) => {
       this._synced = false;
+      this.workspaces.clear();
       if (this.restartTimer) {
         clearTimeout(this.restartTimer);
       }
       console.error('[WorkspaceStore] informer error, restarting in 5s:', err);
       this.restartTimer = setTimeout(() => {
-        this.workspaces.clear();
-        this.informer?.start();
+        void this.informer?.start().catch((restartErr) => {
+          console.error('[WorkspaceStore] informer restart failed:', restartErr);
+        });
       }, RESTART_DELAY_MS);
     });
 
