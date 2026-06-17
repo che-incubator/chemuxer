@@ -23,9 +23,8 @@ export function handleToolError(err: unknown): ToolErrorResult {
     };
   }
   if (err instanceof UpstreamError) {
-    const code = err.statusCode === 404 ? 'TERMINAL_NOT_FOUND' : 'UPSTREAM_ERROR';
     return {
-      content: [{ type: 'text' as const, text: JSON.stringify({ error_code: code, message: err.message }) }],
+      content: [{ type: 'text' as const, text: JSON.stringify({ error_code: 'UPSTREAM_ERROR', message: err.message }) }],
       isError: true,
     };
   }

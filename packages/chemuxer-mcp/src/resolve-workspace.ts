@@ -12,10 +12,16 @@ export function resolveWorkspace(
   if (ws.idled) {
     throw new ToolError('WORKSPACE_IDLED', `Workspace "${workspaceName}" is idled`);
   }
-  if (!ws.ready || !ws.endpoint) {
+  if (!ws.ready) {
     throw new ToolError(
       'WORKSPACE_NOT_READY',
       `Workspace "${workspaceName}" is not ready (phase: ${ws.phase})`,
+    );
+  }
+  if (!ws.endpoint) {
+    throw new ToolError(
+      'WORKSPACE_UNREACHABLE',
+      `Workspace "${workspaceName}" is ready but has no reachable endpoint`,
     );
   }
   return ws;

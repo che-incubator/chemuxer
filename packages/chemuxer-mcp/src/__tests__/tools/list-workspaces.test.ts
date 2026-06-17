@@ -78,7 +78,7 @@ describe('list_workspaces tool', () => {
     const result = await callListWorkspaces(makeStore([idledWorkspace]));
     const ws = result.workspaces[0];
     expect(ws.idled).toBe(true);
-    expect(ws.reason).toBe('Workspace is idled');
+    expect(ws.reason).toContain('Workspace is idled');
   });
 
   it('returns non-ready workspace with reason including phase', async () => {

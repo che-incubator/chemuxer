@@ -87,6 +87,25 @@ describe('resolveChemuxerPort', () => {
     });
     expect(resolveChemuxerPort(pod, DEFAULT_CHEMUXER_PORT)).toBe(7681);
   });
+
+  it('finds CHEMUXER_PORT on a non-first container', () => {
+    const pod = makePod({
+      containers: [
+        { name: 'gateway' },
+        { name: 'chemuxer', env: [{ name: 'CHEMUXER_PORT', value: '8888' }] },
+      ],
+    });
+    expect(resolveChemuxerPort(pod, DEFAULT_CHEMUXER_PORT)).toBe(8888);
+  });
+
+  it('rejects port numbers above 65535', () => {
+    const pod = makePod({
+      containers: [
+        { name: 'main', env: [{ name: 'CHEMUXER_PORT', value: '99999' }] },
+      ],
+    });
+    expect(resolveChemuxerPort(pod, DEFAULT_CHEMUXER_PORT)).toBe(7681);
+  });
 });
 
 describe('extractWorkspaceInfo', () => {

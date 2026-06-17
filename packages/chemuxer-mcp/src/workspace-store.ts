@@ -36,10 +36,9 @@ export function resolveChemuxerPort(pod: k8s.V1Pod, defaultPort: number): number
     }
   }
 
-  // Step 2: env var on first container
-  const firstContainer = containers[0];
-  if (firstContainer) {
-    for (const env of firstContainer.env ?? []) {
+  // Step 2: CHEMUXER_PORT env var on any container
+  for (const container of containers) {
+    for (const env of container.env ?? []) {
       if (env.name === 'CHEMUXER_PORT' && env.value) {
         const parsed = Number(env.value);
         if (Number.isInteger(parsed) && parsed >= 1 && parsed <= 65535) {

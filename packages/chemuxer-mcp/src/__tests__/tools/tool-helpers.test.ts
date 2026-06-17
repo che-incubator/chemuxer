@@ -35,11 +35,11 @@ describe('handleToolError', () => {
     expect(body.message).toBe('not found');
   });
 
-  it('returns TERMINAL_NOT_FOUND for UpstreamError with status 404', () => {
+  it('returns UPSTREAM_ERROR for UpstreamError with status 404', () => {
     const result = handleToolError(new UpstreamError(404, 'no such session'));
     expect(result.isError).toBe(true);
     const body = JSON.parse((result.content as { text: string }[])[0].text);
-    expect(body.error_code).toBe('TERMINAL_NOT_FOUND');
+    expect(body.error_code).toBe('UPSTREAM_ERROR');
   });
 
   it('returns UPSTREAM_ERROR for UpstreamError with status 500', () => {
