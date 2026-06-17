@@ -141,18 +141,7 @@ export class FeedCollector {
 
   getSessionFeed(sessionId: string, since?: string): FeedResponse {
     const bucket = this.entries.get(sessionId) ?? [];
-    if (!since) {
-      const latest = bucket.length > 0 ? [bucket[bucket.length - 1]] : [];
-      return {
-        entries: latest,
-        nextSince: latest.length > 0 ? latest[0].timestamp : new Date().toISOString(),
-      };
-    }
-    const filtered = bucket.filter(e => e.timestamp > since);
-    return {
-      entries: filtered,
-      nextSince: filtered.length > 0 ? filtered[filtered.length - 1].timestamp : since,
-    };
+    return this.buildFeedResponse(bucket, since);
   }
 
   getAllFeed(since?: string): FeedResponse {
@@ -161,15 +150,18 @@ export class FeedCollector {
       all.push(...bucket);
     }
     all.sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+    return this.buildFeedResponse(all, since);
+  }
 
+  private buildFeedResponse(entries: FeedEntry[], since?: string): FeedResponse {
     if (!since) {
-      const latest = all.length > 0 ? [all[all.length - 1]] : [];
+      const latest = entries.length > 0 ? [entries[entries.length - 1]] : [];
       return {
         entries: latest,
         nextSince: latest.length > 0 ? latest[0].timestamp : new Date().toISOString(),
       };
     }
-    const filtered = all.filter(e => e.timestamp > since);
+    const filtered = entries.filter(e => e.timestamp > since);
     return {
       entries: filtered,
       nextSince: filtered.length > 0 ? filtered[filtered.length - 1].timestamp : since,
