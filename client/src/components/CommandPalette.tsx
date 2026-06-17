@@ -21,6 +21,7 @@ export function CommandPalette({ open, onOpenChange, commands }: CommandPaletteP
   const isSubLevel = stack.length > 1;
 
   const handleSelect = (cmd: CommandType) => {
+    if (cmd.disabled) return;
     if (cmd.children) {
       setStack((prev) => [...prev, { label: cmd.label, commands: cmd.children! }]);
     } else if (cmd.action) {
@@ -64,6 +65,7 @@ export function CommandPalette({ open, onOpenChange, commands }: CommandPaletteP
           <Command.Item
             key={cmd.id}
             value={cmd.label}
+            disabled={cmd.disabled}
             onSelect={() => handleSelect(cmd)}
             className="command-palette-item"
           >

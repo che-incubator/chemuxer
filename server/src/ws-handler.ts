@@ -17,6 +17,8 @@ export function setupWebSocketServer(
   manager: SessionManager,
   settingsManager: SettingsManager
 ): { broadcastControl: (data: ServerControlMessage) => void } {
+  const WS_CONTROL_PATH = '/ws/control';
+  const WS_IO_PREFIX = '/ws/';
   const MAX_CONNECTIONS = 100;
   const wss = new WebSocketServer({ noServer: true, maxPayload: 1 * 1024 * 1024 });
   let activeConnections = 0;
@@ -59,15 +61,15 @@ export function setupWebSocketServer(
     const url = new URL(req.url || '/', `http://${req.headers.host}`);
     const pathname = url.pathname;
 
-    if (pathname === '/ws/control') {
+    if (pathname === WS_CONTROL_PATH) {
       wss.handleUpgrade(req, socket, head, (ws) => {
         activeConnections++;
         ws.on('close', () => { activeConnections--; });
         wss.emit('connection', ws, req);
         handleControl(ws, manager, controlClients);
       });
-    } else if (pathname.startsWith('/ws/')) {
-      const sessionId = pathname.slice(4); // strip '/ws/'
+    } else if (pathname.startsWith(WS_IO_PREFIX)) {
+      const sessionId = pathname.slice(WS_IO_PREFIX.length);
       const session = manager.getSession(sessionId);
       if (!session) {
         wss.handleUpgrade(req, socket, head, (ws) => {

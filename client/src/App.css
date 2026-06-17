@@ -256,6 +256,11 @@ html, body, #root {
   background: var(--ch-surface0);
 }
 
+.command-palette-item[data-disabled="true"] {
+  opacity: 0.4;
+  cursor: default;
+}
+
 /* Inline Rename */
 .tab-rename-input {
   background: var(--ch-crust);

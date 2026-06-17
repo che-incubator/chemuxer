@@ -25,6 +25,20 @@ function dropZoneToDirection(zone: DropZone): 'horizontal' | 'vertical' {
   return 'horizontal';
 }
 
+function buildSplitNode(targetPaneId: string, newPaneId: string, zone: DropZone): LayoutNode {
+  const direction = dropZoneToDirection(zone);
+  const isFirst = zone === 'left' || zone === 'top';
+  const newLeaf: LayoutNode = { type: 'leaf', paneId: newPaneId };
+  const originalLeaf: LayoutNode = { type: 'leaf', paneId: targetPaneId };
+  return {
+    type: 'split',
+    direction,
+    ratio: 0.5,
+    first: isFirst ? newLeaf : originalLeaf,
+    second: isFirst ? originalLeaf : newLeaf,
+  };
+}
+
 function replaceLeaf(node: LayoutNode, targetPaneId: string, replacement: LayoutNode): LayoutNode {
   if (node.type === 'leaf') {
     return node.paneId === targetPaneId ? replacement : node;
@@ -258,18 +272,7 @@ export function useLayout(deps: LayoutDeps): LayoutState {
         if (sourcePaneId === targetPaneId && getTerminalSessionIds(sourcePane.entries).length === 1) return prev;
 
         const newPaneId = generatePaneId();
-        const direction = dropZoneToDirection(zone);
-        const isFirst = zone === 'left' || zone === 'top';
-
-        const newLeaf: LayoutNode = { type: 'leaf', paneId: newPaneId };
-        const originalLeaf: LayoutNode = { type: 'leaf', paneId: targetPaneId };
-        const splitNode: LayoutNode = {
-          type: 'split',
-          direction,
-          ratio: 0.5,
-          first: isFirst ? newLeaf : originalLeaf,
-          second: isFirst ? originalLeaf : newLeaf,
-        };
+        const splitNode = buildSplitNode(targetPaneId, newPaneId, zone);
 
         const updated = { ...prev };
 
@@ -449,18 +452,7 @@ export function useLayout(deps: LayoutDeps): LayoutState {
       if (!sourcePane || !sourcePane.entries.some((e) => e.type === 'settings')) return;
 
       const newPaneId = generatePaneId();
-      const direction = dropZoneToDirection(zone);
-      const isFirst = zone === 'left' || zone === 'top';
-
-      const newLeaf: LayoutNode = { type: 'leaf', paneId: newPaneId };
-      const originalLeaf: LayoutNode = { type: 'leaf', paneId: targetPaneId };
-      const splitNode: LayoutNode = {
-        type: 'split',
-        direction,
-        ratio: 0.5,
-        first: isFirst ? newLeaf : originalLeaf,
-        second: isFirst ? originalLeaf : newLeaf,
-      };
+      const splitNode = buildSplitNode(targetPaneId, newPaneId, zone);
 
       setPanes((prev) => {
         const source = prev[sourcePaneId];
@@ -534,18 +526,7 @@ export function useLayout(deps: LayoutDeps): LayoutState {
   const createSplitSession = useCallback(
     (targetPaneId: string, zone: DropZone) => {
       const newPaneId = generatePaneId();
-      const direction = dropZoneToDirection(zone);
-      const isFirst = zone === 'left' || zone === 'top';
-
-      const newLeaf: LayoutNode = { type: 'leaf', paneId: newPaneId };
-      const originalLeaf: LayoutNode = { type: 'leaf', paneId: targetPaneId };
-      const splitNode: LayoutNode = {
-        type: 'split',
-        direction,
-        ratio: 0.5,
-        first: isFirst ? newLeaf : originalLeaf,
-        second: isFirst ? originalLeaf : newLeaf,
-      };
+      const splitNode = buildSplitNode(targetPaneId, newPaneId, zone);
 
       setPanes((prev) => ({
         ...prev,
