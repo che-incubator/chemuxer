@@ -20,7 +20,9 @@ jobs:
 
       - run: npm ci
 
-      - run: npm test
+      - run: npm run build -w packages/shared
+
+      - run: npm test -w packages/shared -w packages/chemuxer
 
   build-image:
     name: Build and push PR image
@@ -46,6 +48,7 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           context: .
+          file: packages/chemuxer/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ env.IMAGE }}:pr-${{ github.event.pull_request.number }}
