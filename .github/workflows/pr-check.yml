@@ -20,7 +20,9 @@ jobs:
 
       - run: npm ci
 
-      - run: npm test
+      - run: npm run build -w packages/shared
+
+      - run: npm test -w packages/shared -w packages/chemuxer
 
   build-image:
     name: Build and push PR image
