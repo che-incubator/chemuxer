@@ -112,6 +112,10 @@ Settings are stored in `./config/settings.json` and editable via the built-in Mo
 - **Testing:** Vitest (153 tests), Testing Library
 - **Build:** Vite (frontend), tsc (backend)
 
+## MCP Server
+
+An optional namespace-level MCP server lets AI agents (Claude Code, Cursor, etc.) manage terminal sessions across workspaces via the [Model Context Protocol](https://modelcontextprotocol.io). See [`packages/chemuxer-mcp/`](packages/chemuxer-mcp/README.md) for setup and tool reference.
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md).
