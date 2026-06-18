@@ -23,7 +23,7 @@ A web-based terminal multiplexer built with TypeScript, React, and xterm.js. Spl
 
 ```bash
 npm install
-npm run dev
+npm run dev -w packages/chemuxer
 ```
 
 Open http://localhost:5173 in your browser.
@@ -64,16 +64,15 @@ See [Architecture Decision Records](docs/adr/README.md) for detailed design rati
 
 | Command | Description |
 |---------|-------------|
-| `npm run dev` | Start dev server (backend + Vite frontend) |
-| `npm run build` | Build for production |
-| `npm start` | Run production build |
-| `npm test` | Run all tests |
-| `npm run test:watch` | Run tests in watch mode |
+| `npm run dev -w packages/chemuxer` | Start dev server (backend + Vite frontend) |
+| `npm run build` | Build all packages |
+| `npm test` | Run all tests across workspaces |
+| `npm start -w packages/chemuxer` | Run production build |
 
 ## Docker
 
 ```bash
-docker build -t chemuxer .
+docker build -f packages/chemuxer/Dockerfile -t chemuxer .
 docker run -p 7681:7681 chemuxer
 ```
 
@@ -109,8 +108,12 @@ Settings are stored in `./config/settings.json` and editable via the built-in Mo
 - **Frontend:** React 19, xterm.js 6.x, react-resizable-panels, cmdk, Monaco
 - **Backend:** Node.js, Express 5, ws, node-pty
 - **Shared:** TypeScript end-to-end, shared WebSocket protocol types
-- **Testing:** Vitest (153 tests), Testing Library
+- **Testing:** Vitest (295 tests), Testing Library
 - **Build:** Vite (frontend), tsc (backend)
+
+## MCP Server
+
+An optional namespace-level MCP server lets AI agents (Claude Code, Cursor, etc.) manage terminal sessions across workspaces via the [Model Context Protocol](https://modelcontextprotocol.io). See [`packages/chemuxer-mcp/`](packages/chemuxer-mcp/README.md) for setup and tool reference.
 
 ## Contributing
 
