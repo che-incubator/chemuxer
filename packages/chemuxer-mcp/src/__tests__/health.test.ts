@@ -24,6 +24,7 @@ async function withServer<T>(
   const server = createServer(app);
 
   return new Promise<T>((resolve, reject) => {
+    server.once('error', reject);
     server.listen(0, async () => {
       const addr = server.address();
       const port = typeof addr === 'object' && addr !== null ? addr.port : 0;
