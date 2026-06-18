@@ -1,5 +1,11 @@
+import fs from 'fs';
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import { Session } from '../session.js';
+
+const TEST_SHELL = ['/bin/zsh', '/bin/bash', '/bin/sh'].find(s => {
+  try { fs.accessSync(s, fs.constants.X_OK); return true; } catch { return false; }
+})!;
+const TEST_SHELL_NAME = TEST_SHELL.split('/').pop()!;
 
 describe('Session', () => {
   let session: Session | undefined;
@@ -9,15 +15,15 @@ describe('Session', () => {
   });
 
   it('spawns a PTY with the requested shell', () => {
-    session = new Session('/bin/zsh');
+    session = new Session(TEST_SHELL);
     expect(session.id).toBeTruthy();
-    expect(session.shell).toBe('/bin/zsh');
-    expect(session.title).toBe('zsh');
+    expect(session.shell).toBe(TEST_SHELL);
+    expect(session.title).toBe(TEST_SHELL_NAME);
     expect(session.createdAt).toBeGreaterThan(0);
   });
 
   it('captures PTY output in headless terminal state', async () => {
-    session = new Session('/bin/zsh');
+    session = new Session(TEST_SHELL);
 
     const output = await new Promise<string>((resolve) => {
       let buf = '';
@@ -41,7 +47,7 @@ describe('Session', () => {
   });
 
   it('getState returns serialized terminal state', async () => {
-    session = new Session('/bin/zsh', { scrollbackLines: 1000 });
+    session = new Session(TEST_SHELL, { scrollbackLines: 1000 });
 
     // Write directly to simulate PTY output
     await session.writeToHeadless('Hello, world!\r\n');
@@ -53,13 +59,13 @@ describe('Session', () => {
   });
 
   it('resize propagates to both PTY and headless terminal', () => {
-    session = new Session('/bin/zsh');
+    session = new Session(TEST_SHELL);
     // Should not throw
     session.resize(120, 40);
   });
 
   it('onData returns a dispose function that removes the listener', async () => {
-    session = new Session('/bin/zsh');
+    session = new Session(TEST_SHELL);
     let callCount = 0;
     const dispose = session.onData(() => { callCount++; });
 
@@ -76,8 +82,8 @@ describe('Session', () => {
   });
 
   it('rename updates the session title', () => {
-    session = new Session('/bin/zsh');
-    expect(session.title).toBe('zsh');
+    session = new Session(TEST_SHELL);
+    expect(session.title).toBe(TEST_SHELL_NAME);
 
     session.rename('my dev server');
     expect(session.title).toBe('my dev server');
@@ -87,16 +93,16 @@ describe('Session', () => {
   });
 
   it('rename with empty string reverts to default shell name', () => {
-    session = new Session('/bin/zsh');
+    session = new Session(TEST_SHELL);
     session.rename('custom name');
     expect(session.title).toBe('custom name');
 
     session.rename('');
-    expect(session.title).toBe('zsh');
+    expect(session.title).toBe(TEST_SHELL_NAME);
   });
 
   it('close kills the PTY process and disposes headless terminal', () => {
-    session = new Session('/bin/zsh');
+    session = new Session(TEST_SHELL);
     session.close();
     expect(session.isClosed).toBe(true);
     session = undefined;
@@ -104,7 +110,7 @@ describe('Session', () => {
 
   describe('resize validation', () => {
     it('rejects NaN values without calling resize on PTY', () => {
-      session = new Session('/bin/zsh');
+      session = new Session(TEST_SHELL);
       const spy = vi.spyOn(session['ptyProcess'], 'resize');
       session.resize(NaN, 24);
       session.resize(80, NaN);
@@ -113,7 +119,7 @@ describe('Session', () => {
     });
 
     it('rejects Infinity values without calling resize on PTY', () => {
-      session = new Session('/bin/zsh');
+      session = new Session(TEST_SHELL);
       const spy = vi.spyOn(session['ptyProcess'], 'resize');
       session.resize(Infinity, 24);
       session.resize(80, -Infinity);
@@ -122,7 +128,7 @@ describe('Session', () => {
     });
 
     it('clamps negative and zero values to minimums (cols=2, rows=1)', () => {
-      session = new Session('/bin/zsh');
+      session = new Session(TEST_SHELL);
       const spy = vi.spyOn(session['ptyProcess'], 'resize');
       session.resize(-10, -5);
       expect(spy).toHaveBeenCalledWith(2, 1);
@@ -133,21 +139,21 @@ describe('Session', () => {
     });
 
     it('clamps values above maximums (cols=500, rows=200)', () => {
-      session = new Session('/bin/zsh');
+      session = new Session(TEST_SHELL);
       const spy = vi.spyOn(session['ptyProcess'], 'resize');
       session.resize(1000, 500);
       expect(spy).toHaveBeenCalledWith(500, 200);
     });
 
     it('truncates float values to integers', () => {
-      session = new Session('/bin/zsh');
+      session = new Session(TEST_SHELL);
       const spy = vi.spyOn(session['ptyProcess'], 'resize');
       session.resize(80.9, 24.7);
       expect(spy).toHaveBeenCalledWith(80, 24);
     });
 
     it('resize on closed session is a no-op', () => {
-      session = new Session('/bin/zsh');
+      session = new Session(TEST_SHELL);
       const spy = vi.spyOn(session['ptyProcess'], 'resize');
       session.close();
       session.resize(80, 24);

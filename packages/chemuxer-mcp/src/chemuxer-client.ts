@@ -17,13 +17,13 @@ export class ChemuxerClient {
 
   async getBuffer(endpoint: string, sessionId: string): Promise<string> {
     const result = await this.get<{ content: string }>(
-      `${endpoint}/api/sessions/${sessionId}/buffer`,
+      `${endpoint}/api/sessions/${encodeURIComponent(sessionId)}/buffer`,
     );
     return result.content;
   }
 
   async sendInput(endpoint: string, sessionId: string, data: string): Promise<void> {
-    await this.post(`${endpoint}/api/sessions/${sessionId}/input`, { data });
+    await this.post(`${endpoint}/api/sessions/${encodeURIComponent(sessionId)}/input`, { data });
   }
 
   async createSession(endpoint: string): Promise<SessionInfo> {
@@ -31,13 +31,13 @@ export class ChemuxerClient {
   }
 
   async closeSession(endpoint: string, sessionId: string): Promise<void> {
-    await this.del(`${endpoint}/api/sessions/${sessionId}`);
+    await this.del(`${endpoint}/api/sessions/${encodeURIComponent(sessionId)}`);
   }
 
   async getFeed(endpoint: string, sessionId?: string, since?: string): Promise<FeedResponse> {
     const params = since ? `?since=${encodeURIComponent(since)}` : '';
     const path = sessionId
-      ? `${endpoint}/api/sessions/${sessionId}/feed${params}`
+      ? `${endpoint}/api/sessions/${encodeURIComponent(sessionId)}/feed${params}`
       : `${endpoint}/api/feed${params}`;
     return this.get<FeedResponse>(path);
   }
