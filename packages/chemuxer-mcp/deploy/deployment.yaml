@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chemuxer-mcp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: chemuxer-mcp
+  template:
+    metadata:
+      labels:
+        app: chemuxer-mcp
+    spec:
+      serviceAccountName: chemuxer-mcp
+      containers:
+        - name: chemuxer-mcp
+          image: quay.io/che-incubator/chemuxer-mcp:next
+          ports:
+            - containerPort: 3001
+              name: sse
+          envFrom:
+            - configMapRef:
+                name: chemuxer-mcp-config
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 3001
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 3001
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+          securityContext:
+            runAsNonRoot: true
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]

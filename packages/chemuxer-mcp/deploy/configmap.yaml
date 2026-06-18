@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: chemuxer-mcp-config
+data:
+  CHEMUXER_DEFAULT_PORT: "7681"
+  REQUEST_TIMEOUT_MS: "2000"
+  FANOUT_CONCURRENCY: "10"
+  FANOUT_BUDGET_MS: "5000"
+  MAX_OUTPUT_BYTES: "16384"
