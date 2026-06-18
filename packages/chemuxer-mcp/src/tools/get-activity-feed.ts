@@ -23,11 +23,11 @@ export function registerGetActivityFeed(
           .regex(/^[A-Za-z0-9._-]+$/)
           .optional(),
         since: z.string().optional(),
-        limit: z.number().int().min(1).max(5000).default(500).optional(),
+        limit: z.number().int().min(1).max(5000).default(500),
       }),
     },
     async ({ workspace, session_id, since, limit }) => {
-      const effectiveLimit = limit ?? 500;
+      const effectiveLimit = limit;
 
       try {
         if (workspace) {
