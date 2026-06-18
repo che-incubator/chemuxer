@@ -16,7 +16,7 @@ export function registerGetTerminalOutput(
       description: 'Get the current terminal buffer content as plain text (ANSI-stripped).',
       inputSchema: z.object({
         workspace: z.string().describe('DevWorkspace name'),
-        session_id: z.string().describe('Terminal session ID'),
+        session_id: z.string().regex(/^[A-Za-z0-9._-]+$/, 'session_id contains invalid characters').describe('Terminal session ID'),
         max_bytes: z.number().int().min(1).max(65536).default(16384)
           .describe('Maximum bytes to return (default 16384, max 65536)'),
       }),
@@ -29,9 +29,20 @@ export function registerGetTerminalOutput(
         const encoder = new TextEncoder();
         const bytes = encoder.encode(content);
         const truncated = bytes.length > max_bytes;
-        const finalContent = truncated
-          ? new TextDecoder().decode(bytes.slice(0, max_bytes))
-          : content;
+
+        let finalContent = content;
+        if (truncated) {
+          let end = max_bytes;
+          while (end > 0) {
+            try {
+              finalContent = new TextDecoder('utf-8', { fatal: true }).decode(bytes.slice(0, end));
+              break;
+            } catch {
+              end -= 1;
+            }
+          }
+          if (end === 0) finalContent = '';
+        }
 
         return {
           content: [{

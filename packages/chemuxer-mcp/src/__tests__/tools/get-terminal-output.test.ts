@@ -100,6 +100,26 @@ describe('get_terminal_output tool', () => {
     expect(body.truncated).toBe(true);
   });
 
+  it('truncates at a valid UTF-8 boundary (no replacement chars)', async () => {
+    const bufferContent = '🙂🙂'; // 8 bytes total
+    const client = makeClient({
+      getBuffer: vi.fn().mockResolvedValue(bufferContent),
+    });
+    const store = makeStore([readyWorkspace]);
+
+    const result = await callGetTerminalOutput(store, client, {
+      workspace: 'ready-ws',
+      session_id: 'sess-1',
+      max_bytes: 5,
+    });
+    expect(result.isError).toBeFalsy();
+
+    const body = parseResult(result);
+    expect(body.content).toBe('🙂');
+    expect(body.content.includes('�')).toBe(false);
+    expect(body.truncated).toBe(true);
+  });
+
   it('uses default max_bytes of 16384 when not provided', async () => {
     const bufferContent = 'B'.repeat(20000);
     const client = makeClient({

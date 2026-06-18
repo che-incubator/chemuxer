@@ -16,7 +16,7 @@ export function registerSendTerminalInput(
       description: 'Send text input to a terminal session. Include \\n for Enter.',
       inputSchema: z.object({
         workspace: z.string().describe('DevWorkspace name'),
-        session_id: z.string().describe('Terminal session ID'),
+        session_id: z.string().regex(/^[A-Za-z0-9._-]+$/, 'session_id contains invalid characters').describe('Terminal session ID'),
         input: z.string().describe('Text to send (include \\n for Enter)'),
       }),
     },

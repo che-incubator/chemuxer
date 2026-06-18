@@ -16,7 +16,7 @@ export function registerCloseTerminal(
       description: 'Close a terminal session in a workspace.',
       inputSchema: z.object({
         workspace: z.string().describe('DevWorkspace name'),
-        session_id: z.string().describe('Terminal session ID'),
+        session_id: z.string().regex(/^[A-Za-z0-9._-]+$/, 'session_id contains invalid characters').describe('Terminal session ID'),
       }),
     },
     async ({ workspace, session_id }) => {
