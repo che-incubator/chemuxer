@@ -14,8 +14,14 @@ describe('loadConfig', () => {
   });
 
   afterEach(() => {
-    // Restore original env
-    process.env = { ...originalEnv };
+    for (const key of Object.keys(process.env)) {
+      if (!(key in originalEnv)) {
+        delete process.env[key];
+      }
+    }
+    for (const [key, value] of Object.entries(originalEnv)) {
+      process.env[key] = value;
+    }
   });
 
   it('returns defaults when no env vars are set', () => {

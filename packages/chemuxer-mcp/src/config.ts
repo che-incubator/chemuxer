@@ -2,7 +2,7 @@ import * as z from 'zod/v4';
 
 const ConfigSchema = z.object({
   port: z.coerce.number().int().min(1).max(65535).default(3001),
-  host: z.string().default('0.0.0.0'),
+  host: z.string().min(1).default('0.0.0.0'),
   namespace: z.string().optional(),
   chemuxerDefaultPort: z.coerce.number().int().min(1).max(65535).default(7681),
   requestTimeoutMs: z.coerce.number().int().min(0).default(2000),
