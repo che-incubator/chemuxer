@@ -53,15 +53,15 @@ The manifests create a Deployment, ServiceAccount with namespace-scoped pod read
 
 ## Configuration
 
-Runtime tuning via ConfigMap env vars (no image rebuild needed):
+Runtime tuning via environment variables (no image rebuild needed):
 
 | Env Var | Default | Description |
 |---------|---------|-------------|
+| `PORT` | 3001 | HTTP/SSE server port |
+| `HOST` | 0.0.0.0 | Bind address |
+| `NAMESPACE` | (auto) | K8s namespace override (auto-detected from service account) |
 | `CHEMUXER_DEFAULT_PORT` | 7681 | Default Chemuxer port on workspace pods |
 | `REQUEST_TIMEOUT_MS` | 2000 | HTTP timeout for upstream Chemuxer calls |
-| `FANOUT_CONCURRENCY` | 10 | Max concurrent cross-workspace requests |
-| `FANOUT_BUDGET_MS` | 5000 | Total time budget for fan-out operations |
-| `MAX_OUTPUT_BYTES` | 16384 | Max terminal output bytes per request |
 
 ## Development
 
