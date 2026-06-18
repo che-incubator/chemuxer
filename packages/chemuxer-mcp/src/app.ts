@@ -53,17 +53,21 @@ export function createApp(deps: AppDeps): AppHandle {
       return;
     }
 
+    let transport: SSEServerTransport | undefined;
     try {
-      const transport = new SSEServerTransport('/messages', res);
+      transport = new SSEServerTransport('/messages', res);
       const mcpServer = createMcpServer(store, client);
       await mcpServer.connect(transport);
       sessions.set(transport.sessionId, transport);
 
       res.on('close', () => {
-        sessions.delete(transport.sessionId);
+        sessions.delete(transport!.sessionId);
       });
     } catch (err) {
       console.error('[app] SSE connection error:', err);
+      if (transport) {
+        try { await transport.close(); } catch { /* ignore */ }
+      }
       if (!res.headersSent) {
         res.status(500).json({ error: 'Failed to establish SSE connection' });
       }
@@ -97,15 +101,15 @@ export function createApp(deps: AppDeps): AppHandle {
   async function shutdown(): Promise<void> {
     shuttingDown = true;
 
-    // Stop accepting new connections first
-    await new Promise<void>((resolve) => {
-      httpServer.close(() => resolve());
-    });
-
-    // Close all active transports
+    // Close all active transports first (releases underlying HTTP responses)
     const closeTasks = Array.from(sessions.values()).map((t) => t.close());
     await Promise.allSettled(closeTasks);
     sessions.clear();
+
+    // Now stop accepting new connections (completes immediately since SSE responses are closed)
+    await new Promise<void>((resolve) => {
+      httpServer.close(() => resolve());
+    });
 
     // Stop the workspace store
     await store.stop();

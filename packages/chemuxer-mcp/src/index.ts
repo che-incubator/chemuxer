@@ -39,6 +39,12 @@ function onSignal(signal: string): void {
   if (exiting) return;
   exiting = true;
   console.log(`[chemuxer-mcp] Received ${signal}, shutting down...`);
+
+  setTimeout(() => {
+    console.error('[chemuxer-mcp] Shutdown timeout exceeded, forcing exit');
+    process.exit(1);
+  }, 10_000).unref();
+
   server
     .shutdown()
     .then(() => process.exit(0))
@@ -50,6 +56,3 @@ function onSignal(signal: string): void {
 
 process.on('SIGTERM', () => onSignal('SIGTERM'));
 process.on('SIGINT', () => onSignal('SIGINT'));
-
-// Force exit if graceful shutdown takes too long
-setTimeout(() => process.exit(1), 10_000).unref();
