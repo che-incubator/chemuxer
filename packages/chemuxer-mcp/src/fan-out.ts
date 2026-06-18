@@ -16,6 +16,10 @@ interface DeferredTask {
   resolve: () => void;
 }
 
+type TaskResult =
+  | { kind: 'success'; entries: AugmentedFeedEntry[]; nextSince: string | null }
+  | { kind: 'failure'; workspace_name: string; code: ErrorCode; message: string };
+
 export async function fanOutFeed(
   workspaces: WorkspaceInfo[],
   client: ChemuxerClient,
@@ -42,10 +46,6 @@ export async function fanOutFeed(
     return { entries: [], nextSince: null };
   }
 
-  const allEntries: AugmentedFeedEntry[] = [];
-  const partialFailures: Array<{ workspace_name: string; code: ErrorCode; message: string }> = [];
-  const successNextSinces: string[] = [];
-
   // Semaphore-based bounded worker pool
   let running = 0;
   const waitQueue: DeferredTask[] = [];
@@ -69,60 +69,61 @@ export async function fanOutFeed(
     }
   }
 
-  const tasks: Promise<void>[] = [];
+  const tasks: Promise<TaskResult>[] = [];
 
   for (const ws of ready) {
     // Budget check before dispatching
     if (now() >= deadline) {
-      partialFailures.push({
+      tasks.push(Promise.resolve({
+        kind: 'failure' as const,
         workspace_name: ws.workspace_name,
-        code: 'UPSTREAM_TIMEOUT',
+        code: 'UPSTREAM_TIMEOUT' as const,
         message: 'Budget expired before request could be dispatched',
-      });
+      }));
       continue;
     }
 
-    const task = acquire().then(async () => {
+    const task = acquire().then(async (): Promise<TaskResult> => {
       // Re-check budget after acquiring the semaphore slot — time may have
       // passed while waiting for a concurrency slot to open up.
       if (now() >= deadline) {
-        partialFailures.push({
+        release();
+        return {
+          kind: 'failure',
           workspace_name: ws.workspace_name,
           code: 'UPSTREAM_TIMEOUT',
           message: 'Budget expired before request could be dispatched',
-        });
-        release();
-        return;
+        };
       }
       try {
         const resp = await client.getFeed(ws.endpoint!, sessionId, since);
-        const augmented: AugmentedFeedEntry[] = resp.entries.map((e) => ({
+        const entries: AugmentedFeedEntry[] = resp.entries.map((e) => ({
           ...e,
           workspace_name: ws.workspace_name,
         }));
-        allEntries.push(...augmented);
-        if (resp.nextSince) {
-          successNextSinces.push(resp.nextSince);
-        }
+        return { kind: 'success', entries, nextSince: resp.nextSince ?? null };
       } catch (err) {
         if (err instanceof UpstreamError) {
-          partialFailures.push({
+          return {
+            kind: 'failure',
             workspace_name: ws.workspace_name,
             code: 'UPSTREAM_ERROR',
             message: err.message,
-          });
+          };
         } else if (err instanceof DOMException && err.name === 'TimeoutError') {
-          partialFailures.push({
+          return {
+            kind: 'failure',
             workspace_name: ws.workspace_name,
             code: 'UPSTREAM_TIMEOUT',
             message: 'Request timed out',
-          });
+          };
         } else {
-          partialFailures.push({
+          return {
+            kind: 'failure',
             workspace_name: ws.workspace_name,
             code: 'UPSTREAM_ERROR',
             message: err instanceof Error ? err.message : String(err),
-          });
+          };
         }
       } finally {
         release();
@@ -132,7 +133,23 @@ export async function fanOutFeed(
     tasks.push(task);
   }
 
-  await Promise.all(tasks);
+  const results = await Promise.all(tasks);
+
+  // Merge results synchronously
+  const allEntries: AugmentedFeedEntry[] = [];
+  const partialFailures: Array<{ workspace_name: string; code: ErrorCode; message: string }> = [];
+  const successNextSinces: string[] = [];
+
+  for (const r of results) {
+    if (r.kind === 'success') {
+      allEntries.push(...r.entries);
+      if (r.nextSince) {
+        successNextSinces.push(r.nextSince);
+      }
+    } else {
+      partialFailures.push({ workspace_name: r.workspace_name, code: r.code, message: r.message });
+    }
+  }
 
   // Sort: timestamp ASC, workspace_name ASC, sessionId ASC
   allEntries.sort((a, b) => {

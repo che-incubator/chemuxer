@@ -249,4 +249,30 @@ describe('fanOutFeed', () => {
     expect(result.partialFailures).toHaveLength(1);
     expect(result.partialFailures![0].code).toBe('UPSTREAM_TIMEOUT');
   });
+
+  it('no lost entries under high concurrency (20 workspaces, concurrency 10)', async () => {
+    const entriesPerWs = 5;
+    const workspaces = Array.from({ length: 20 }, (_, i) =>
+      makeWs(`ws-${i}`, `http://ws-${i}:7681`),
+    );
+
+    const getFeed = vi.fn<ChemuxerClient['getFeed']>()
+      .mockImplementation(async (endpoint) => {
+        // Small random-ish delay to interleave resolution order
+        await new Promise((r) => setTimeout(r, Math.random() * 10));
+        const wsIndex = endpoint.match(/ws-(\d+)/)?.[1] ?? '0';
+        const entries = Array.from({ length: entriesPerWs }, (_, j) => ({
+          timestamp: `2026-01-01T00:00:${String(parseInt(wsIndex) * entriesPerWs + j).padStart(2, '0')}Z`,
+          sessionId: `s-${wsIndex}`,
+          content: `ws-${wsIndex}-entry-${j}`,
+        }));
+        return feedResponse(entries, `ts-${wsIndex}`);
+      });
+
+    const result = await fanOutFeed(workspaces, makeClient(getFeed), { concurrency: 10 });
+
+    expect(result.entries).toHaveLength(100);
+    expect(result.partialFailures).toBeUndefined();
+    expect(getFeed).toHaveBeenCalledTimes(20);
+  });
 });
