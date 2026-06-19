@@ -37,6 +37,10 @@ export function registerGetActivityFeed(
           const entries = resp.entries
             .slice(0, effectiveLimit)
             .map((e) => ({ ...e, workspace_name: ws.workspace_name }));
+          let { nextSince } = resp;
+          if (resp.entries.length > effectiveLimit && entries.length > 0) {
+            nextSince = entries[entries.length - 1].timestamp;
+          }
           return {
             content: [
               {
@@ -44,7 +48,7 @@ export function registerGetActivityFeed(
                 text: JSON.stringify(
                   {
                     entries,
-                    nextSince: resp.nextSince,
+                    nextSince,
                     workspace_status: makeWorkspaceStatus(ws),
                   },
                   null,

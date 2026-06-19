@@ -163,8 +163,9 @@ export class WorkspaceStore {
     });
 
     this.informer.on('error', (err) => {
-      this._synced = false;
-      this.workspaces.clear();
+      // Keep stale data as best-effort during transient errors.
+      // Clearing workspaces here causes all tools to return
+      // WORKSPACE_NOT_FOUND for the duration of the restart delay.
       if (this.restartTimer) {
         clearTimeout(this.restartTimer);
       }
@@ -188,6 +189,7 @@ export class WorkspaceStore {
       await this.informer.stop();
       this.informer = null;
     }
+    this.workspaces.clear();
     this._synced = false;
   }
 }

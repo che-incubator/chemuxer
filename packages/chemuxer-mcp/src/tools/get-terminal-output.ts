@@ -32,16 +32,16 @@ export function registerGetTerminalOutput(
 
         let finalContent = content;
         if (truncated) {
-          let end = max_bytes;
-          while (end > 0) {
+          let start = bytes.length - max_bytes;
+          while (start < bytes.length) {
             try {
-              finalContent = new TextDecoder('utf-8', { fatal: true }).decode(bytes.slice(0, end));
+              finalContent = new TextDecoder('utf-8', { fatal: true }).decode(bytes.slice(start));
               break;
             } catch {
-              end -= 1;
+              start += 1;
             }
           }
-          if (end === 0) finalContent = '';
+          if (start === bytes.length) finalContent = '';
         }
 
         return {
