@@ -117,7 +117,16 @@ export class WorkspaceStore {
   }
 
   get(workspaceName: string): WorkspaceInfo | undefined {
-    return this.workspaces.get(workspaceName);
+    let fallback: WorkspaceInfo | undefined;
+    for (const info of this.workspaces.values()) {
+      if (info.workspace_name === workspaceName) {
+        if (info.ready) {
+          return info;
+        }
+        fallback ??= info;
+      }
+    }
+    return fallback;
   }
 
   async start(): Promise<void> {
@@ -143,14 +152,14 @@ export class WorkspaceStore {
     const upsert = (pod: k8s.V1Pod): void => {
       const info = extractWorkspaceInfo(pod, this.defaultPort);
       if (info) {
-        this.workspaces.set(info.workspace_name, info);
+        this.workspaces.set(info.pod_name, info);
       }
     };
 
     const remove = (pod: k8s.V1Pod): void => {
-      const name = pod.metadata?.labels?.[DW_NAME_LABEL];
-      if (name) {
-        this.workspaces.delete(name);
+      const podName = pod.metadata?.name;
+      if (podName) {
+        this.workspaces.delete(podName);
       }
     };
 
