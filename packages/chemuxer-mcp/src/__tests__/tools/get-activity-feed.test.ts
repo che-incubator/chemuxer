@@ -107,6 +107,27 @@ describe('get_activity_feed tool', () => {
 
       expect(getFeed).toHaveBeenCalledWith('http://10.0.0.1:7681', 'my-session', undefined);
     });
+
+    it('recalculates nextSince when entries are truncated by limit', async () => {
+      const feedResp: FeedResponse = {
+        entries: Array.from({ length: 10 }, (_, i) => ({
+          timestamp: `2026-01-01T00:00:${String(i).padStart(2, '0')}Z`,
+          sessionId: 's1',
+          content: `entry-${i}`,
+        })),
+        nextSince: 'upstream-cursor-should-not-appear',
+      };
+      const client = makeClient({ getFeed: vi.fn().mockResolvedValue(feedResp) });
+      const store = makeStore([readyWsA]);
+
+      const result = await callTool(store, client, { workspace: 'ws-a', limit: 3 });
+      expect(result.isError).toBeFalsy();
+
+      const body = parseResult(result);
+      expect(body.entries).toHaveLength(3);
+      // nextSince must be the last included entry's timestamp, not the upstream cursor
+      expect(body.nextSince).toBe('2026-01-01T00:00:02Z');
+    });
   });
 
   describe('cross-workspace mode', () => {
