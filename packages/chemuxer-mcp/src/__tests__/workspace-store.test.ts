@@ -1,10 +1,46 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as k8s from '@kubernetes/client-node';
 import {
   extractWorkspaceInfo,
   resolveChemuxerPort,
   DEFAULT_CHEMUXER_PORT,
 } from '../workspace-store.js';
+
+/**
+ * Minimal informer stub that lets tests fire events manually.
+ */
+function createFakeInformer() {
+  const handlers = new Map<string, Array<(...args: unknown[]) => void>>();
+  return {
+    on(event: string, cb: (...args: unknown[]) => void) {
+      if (!handlers.has(event)) handlers.set(event, []);
+      handlers.get(event)!.push(cb);
+    },
+    async start() {
+      /* no-op */
+    },
+    async stop() {
+      /* no-op */
+    },
+    /** Fire an event manually from the test. */
+    emit(event: string, ...args: unknown[]) {
+      for (const fn of handlers.get(event) ?? []) fn(...args);
+    },
+  };
+}
+
+let fakeInformer = createFakeInformer();
+
+vi.mock('@kubernetes/client-node', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@kubernetes/client-node')>();
+  return {
+    ...actual,
+    makeInformer: vi.fn(() => fakeInformer),
+  };
+});
+
+// Re-import WorkspaceStore AFTER the mock is set up.
+const { WorkspaceStore } = await import('../workspace-store.js');
 
 function makePod(overrides: {
   name?: string;
@@ -148,5 +184,97 @@ describe('extractWorkspaceInfo', () => {
     const info = extractWorkspaceInfo(pod, DEFAULT_CHEMUXER_PORT);
 
     expect(info).toBeNull();
+  });
+});
+
+/* ---------- WorkspaceStore (informer lifecycle) ---------- */
+
+describe('WorkspaceStore', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    // Each test gets a fresh informer so handlers don't leak.
+    fakeInformer = createFakeInformer();
+    vi.mocked(k8s.makeInformer).mockReturnValue(
+      fakeInformer as unknown as k8s.Informer<k8s.V1Pod> & k8s.ObjectCache<k8s.V1Pod>,
+    );
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  function createStore(): InstanceType<typeof WorkspaceStore> {
+    const kc = new k8s.KubeConfig();
+    kc.loadFromDefault();
+    // Mock makeApiClient to avoid real HTTP calls.
+    vi.spyOn(kc, 'makeApiClient').mockReturnValue({
+      listNamespacedPod: vi.fn(),
+    } as unknown as k8s.CoreV1Api);
+    return new WorkspaceStore(kc, 'test-ns');
+  }
+
+  function addWorkspace(store: InstanceType<typeof WorkspaceStore>): void {
+    const pod = makePod({ podIP: '10.0.0.1' });
+    fakeInformer.emit('connect');
+    fakeInformer.emit('add', pod);
+    // Sanity: workspace must be visible after add event.
+    expect(store.list()).toHaveLength(1);
+    expect(store.synced).toBe(true);
+  }
+
+  it('preserves workspace data on informer error', async () => {
+    const store = createStore();
+    await store.start();
+
+    addWorkspace(store);
+
+    // Simulate a transient K8s API error.
+    fakeInformer.emit('error', new Error('transient network hiccup'));
+
+    // Workspaces must still be accessible.
+    expect(store.list()).toHaveLength(1);
+    expect(store.get('my-workspace')).toBeDefined();
+    expect(store.get('my-workspace')!.workspace_id).toBe('ws-id-123');
+  });
+
+  it('keeps synced true on informer error', async () => {
+    const store = createStore();
+    await store.start();
+
+    addWorkspace(store);
+
+    fakeInformer.emit('error', new Error('transient error'));
+
+    // synced must remain true — stale data is better than no data.
+    expect(store.synced).toBe(true);
+  });
+
+  it('schedules informer restart after error', async () => {
+    const store = createStore();
+    await store.start();
+
+    const startSpy = vi.spyOn(fakeInformer, 'start');
+
+    fakeInformer.emit('error', new Error('watch timeout'));
+
+    // Restart should not happen immediately.
+    expect(startSpy).not.toHaveBeenCalled();
+
+    // Advance past the 5-second restart delay.
+    await vi.advanceTimersByTimeAsync(5_000);
+
+    expect(startSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('clears workspaces on explicit stop()', async () => {
+    const store = createStore();
+    await store.start();
+
+    addWorkspace(store);
+
+    await store.stop();
+
+    expect(store.list()).toHaveLength(0);
+    expect(store.synced).toBe(false);
   });
 });
