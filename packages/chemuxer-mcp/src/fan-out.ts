@@ -2,7 +2,7 @@ import type { FeedEntry } from '@chemuxer/shared';
 import type { WorkspaceInfo } from './workspace-store.js';
 import type { ChemuxerClient } from './chemuxer-client.js';
 import type { ErrorCode } from './errors.js';
-import { UpstreamError } from './chemuxer-client.js';
+import { classifyError } from './tools/tool-helpers.js';
 
 export type AugmentedFeedEntry = FeedEntry & { workspace_name: string };
 
@@ -103,28 +103,13 @@ export async function fanOutFeed(
         }));
         return { kind: 'success', entries, nextSince: resp.nextSince ?? null };
       } catch (err) {
-        if (err instanceof UpstreamError) {
-          return {
-            kind: 'failure',
-            workspace_name: ws.workspace_name,
-            code: 'UPSTREAM_ERROR',
-            message: err.message,
-          };
-        } else if (err instanceof DOMException && err.name === 'TimeoutError') {
-          return {
-            kind: 'failure',
-            workspace_name: ws.workspace_name,
-            code: 'UPSTREAM_TIMEOUT',
-            message: 'Request timed out',
-          };
-        } else {
-          return {
-            kind: 'failure',
-            workspace_name: ws.workspace_name,
-            code: 'UPSTREAM_ERROR',
-            message: err instanceof Error ? err.message : String(err),
-          };
-        }
+        const classified = classifyError(err);
+        return {
+          kind: 'failure',
+          workspace_name: ws.workspace_name,
+          code: classified?.errorCode ?? 'UPSTREAM_ERROR',
+          message: classified?.message ?? (err instanceof Error ? err.message : String(err)),
+        };
       } finally {
         release();
       }
@@ -153,7 +138,7 @@ export async function fanOutFeed(
 
   // Sort: timestamp ASC, workspace_name ASC, sessionId ASC
   allEntries.sort((a, b) => {
-    const tCmp = a.timestamp.localeCompare(b.timestamp);
+    const tCmp = new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
     if (tCmp !== 0) return tCmp;
     const wCmp = a.workspace_name.localeCompare(b.workspace_name);
     if (wCmp !== 0) return wCmp;
@@ -163,7 +148,9 @@ export async function fanOutFeed(
   // Compute nextSince: max of successful nextSince values
   let nextSince: string | null = null;
   if (successNextSinces.length > 0) {
-    nextSince = successNextSinces.reduce((max, cur) => (cur > max ? cur : max));
+    nextSince = successNextSinces.reduce((max, cur) =>
+      new Date(cur).getTime() > new Date(max).getTime() ? cur : max,
+    );
   } else if (since) {
     nextSince = since;
   }
