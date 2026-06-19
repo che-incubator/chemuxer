@@ -30,7 +30,7 @@ function makeClient(overrides: Partial<ChemuxerClient> = {}): ChemuxerClient {
 async function callCreateTerminal(
   store: ReturnType<typeof makeStore>,
   client: ChemuxerClient,
-  args: { workspace: string; shell?: string; title?: string },
+  args: { workspace: string },
 ) {
   const server = new McpServer({ name: 'test', version: '0.0.1' });
   registerCreateTerminal(server, store, client);

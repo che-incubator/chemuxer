@@ -266,6 +266,29 @@ describe('WorkspaceStore', () => {
     expect(startSpy).toHaveBeenCalledTimes(1);
   });
 
+  it('rolling update: old pod delete does not remove new pod', async () => {
+    const store = createStore();
+    await store.start();
+    fakeInformer.emit('connect');
+
+    // New pod arrives (add event for pod-v2).
+    const podV2 = makePod({ name: 'ws-pod-v2', podIP: '10.0.0.2' });
+    fakeInformer.emit('add', podV2);
+    expect(store.get('my-workspace')).toBeDefined();
+    expect(store.get('my-workspace')!.pod_name).toBe('ws-pod-v2');
+
+    // Old pod terminates (delete event for pod-v1, same workspace_name label).
+    const podV1 = makePod({ name: 'ws-pod-v1' });
+    fakeInformer.emit('delete', podV1);
+
+    // The new pod must still be visible — the delete must not have removed it.
+    const info = store.get('my-workspace');
+    expect(info).toBeDefined();
+    expect(info!.pod_name).toBe('ws-pod-v2');
+    expect(info!.endpoint).toBe('http://10.0.0.2:7681');
+    expect(store.list()).toHaveLength(1);
+  });
+
   it('clears workspaces on explicit stop()', async () => {
     const store = createStore();
     await store.start();
