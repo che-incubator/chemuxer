@@ -31,11 +31,20 @@ try {
 console.log(`[chemuxer-mcp] Listening on ${config.host}:${config.port} (namespace: ${namespace})`);
 
 // Start the informer in the background — do not block the event loop.
-// If it fails the readiness probe will keep returning 503.
-store.start().then(
-  () => console.log('[chemuxer-mcp] Workspace store synced'),
-  (err) => console.error('[chemuxer-mcp] Workspace store failed to start:', err),
-);
+// If it fails, retry after a delay so /readyz does not stay 503 forever.
+const STORE_START_RETRY_MS = 5_000;
+
+function startStoreInBackground(): void {
+  store.start().then(
+    () => console.log('[chemuxer-mcp] Workspace store synced'),
+    (err) => {
+      console.error('[chemuxer-mcp] Workspace store failed to start:', err);
+      setTimeout(startStoreInBackground, STORE_START_RETRY_MS).unref();
+    },
+  );
+}
+
+startStoreInBackground();
 
 let exiting = false;
 function onSignal(signal: string): void {
