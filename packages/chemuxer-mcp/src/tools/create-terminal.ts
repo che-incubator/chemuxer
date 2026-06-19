@@ -16,8 +16,6 @@ export function registerCreateTerminal(
       description: 'Create a new terminal session in a workspace.',
       inputSchema: z.object({
         workspace: z.string().describe('DevWorkspace name'),
-        shell: z.string().optional().describe('Shell path (e.g. /bin/bash)'),
-        title: z.string().optional().describe('Session title'),
       }),
     },
     async ({ workspace }) => {

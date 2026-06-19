@@ -44,7 +44,7 @@ export function createApp(deps: AppDeps): AppHandle {
 
   app.use(createHealthRouter(store));
 
-  const sessions = new Map<string, SSEServerTransport>();
+  const sessions = new Map<string, { transport: SSEServerTransport; mcpServer: McpServer }>();
   let shuttingDown = false;
 
   app.get('/sse', async (req, res) => {
@@ -58,9 +58,13 @@ export function createApp(deps: AppDeps): AppHandle {
       transport = new SSEServerTransport('/messages', res);
       const mcpServer = createMcpServer(store, client);
       await mcpServer.connect(transport);
-      sessions.set(transport.sessionId, transport);
+      sessions.set(transport.sessionId, { transport, mcpServer });
 
-      res.on('close', () => {
+      res.on('close', async () => {
+        const session = sessions.get(transport!.sessionId);
+        if (session) {
+          try { await session.mcpServer.close(); } catch { /* ignore */ }
+        }
         sessions.delete(transport!.sessionId);
       });
     } catch (err) {
@@ -81,14 +85,14 @@ export function createApp(deps: AppDeps): AppHandle {
     }
 
     const sessionId = req.query.sessionId as string | undefined;
-    const transport = sessionId ? sessions.get(sessionId) : undefined;
+    const session = sessionId ? sessions.get(sessionId) : undefined;
 
-    if (!transport) {
+    if (!session) {
       res.status(404).json({ error: 'Session not found' });
       return;
     }
 
-    await transport.handlePostMessage(req, res);
+    await session.transport.handlePostMessage(req, res);
   });
 
   async function start(port: number, host: string): Promise<void> {
@@ -101,8 +105,11 @@ export function createApp(deps: AppDeps): AppHandle {
   async function shutdown(): Promise<void> {
     shuttingDown = true;
 
-    // Close all active transports first (releases underlying HTTP responses)
-    const closeTasks = Array.from(sessions.values()).map((t) => t.close());
+    // Close all active MCP servers and transports
+    const closeTasks = Array.from(sessions.values()).flatMap((s) => [
+      s.mcpServer.close(),
+      s.transport.close(),
+    ]);
     await Promise.allSettled(closeTasks);
     sessions.clear();
 
