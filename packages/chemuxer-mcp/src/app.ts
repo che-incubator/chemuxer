@@ -54,9 +54,10 @@ export function createApp(deps: AppDeps): AppHandle {
     }
 
     let transport: SSEServerTransport | undefined;
+    let mcpServer: McpServer | undefined;
     try {
       transport = new SSEServerTransport('/messages', res);
-      const mcpServer = createMcpServer(store, client);
+      mcpServer = createMcpServer(store, client);
       await mcpServer.connect(transport);
       sessions.set(transport.sessionId, { transport, mcpServer });
 
@@ -69,6 +70,9 @@ export function createApp(deps: AppDeps): AppHandle {
       });
     } catch (err) {
       console.error('[app] SSE connection error:', err);
+      if (mcpServer) {
+        try { await mcpServer.close(); } catch { /* ignore */ }
+      }
       if (transport) {
         try { await transport.close(); } catch { /* ignore */ }
       }
