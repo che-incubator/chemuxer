@@ -148,7 +148,9 @@ export async function fanOutFeed(
   // Compute nextSince: max of successful nextSince values
   let nextSince: string | null = null;
   if (successNextSinces.length > 0) {
-    nextSince = successNextSinces.reduce((max, cur) => (cur > max ? cur : max));
+    nextSince = successNextSinces.reduce((max, cur) =>
+      new Date(cur).getTime() > new Date(max).getTime() ? cur : max,
+    );
   } else if (since) {
     nextSince = since;
   }
