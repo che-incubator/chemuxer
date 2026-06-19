@@ -80,8 +80,8 @@ describe('get_terminal_output tool', () => {
     expect(client.getBuffer).toHaveBeenCalledWith('http://10.0.0.1:7681', 'sess-1');
   });
 
-  it('truncates content and sets truncated: true when over max_bytes', async () => {
-    const bufferContent = 'A'.repeat(200);
+  it('truncates from head, keeping the most recent (tail) content', async () => {
+    const bufferContent = 'A'.repeat(150) + 'B'.repeat(50);
     const client = makeClient({
       getBuffer: vi.fn().mockResolvedValue(bufferContent),
     });
@@ -96,17 +96,19 @@ describe('get_terminal_output tool', () => {
 
     const body = parseResult(result);
     expect(body.content.length).toBe(50);
-    expect(body.content).toBe('A'.repeat(50));
+    expect(body.content).toBe('B'.repeat(50));
     expect(body.truncated).toBe(true);
   });
 
-  it('truncates at a valid UTF-8 boundary (no replacement chars)', async () => {
-    const bufferContent = '🙂🙂'; // 8 bytes total
+  it('truncates at a valid UTF-8 boundary keeping the last emoji', async () => {
+    const bufferContent = '🙂🙂'; // 8 bytes total, 4 bytes per emoji
     const client = makeClient({
       getBuffer: vi.fn().mockResolvedValue(bufferContent),
     });
     const store = makeStore([readyWorkspace]);
 
+    // max_bytes=5 takes last 5 bytes [3..7]: 1 partial byte + 4 bytes of second emoji
+    // UTF-8 safe trim drops the leading partial byte, leaving the second emoji
     const result = await callGetTerminalOutput(store, client, {
       workspace: 'ready-ws',
       session_id: 'sess-1',
