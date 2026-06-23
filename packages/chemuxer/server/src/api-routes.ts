@@ -8,23 +8,45 @@ import type { ServerControlMessage } from '@chemuxer/shared';
 
 const AGENTS_MD = `# Chemuxer — Agent Instructions
 
-Chemuxer is a web-based terminal multiplexer running inside this workspace.
-You can manage terminal sessions and read their output via the REST API below.
+Chemuxer is a web-based terminal multiplexer running inside Eclipse Che
+workspaces. There are two ways to interact with it programmatically,
+depending on where your agent is running.
 
-## Access
+## External agents (recommended)
 
-If you are running inside the same pod or cluster, call the API directly
-(e.g. http://localhost:7681/api/sessions).
+If your agent runs outside the cluster (e.g., Claude Code on your laptop),
+use the **namespace-level MCP server**. It aggregates terminal sessions
+across ALL workspaces in your namespace through a single connection.
 
-If you are running outside the cluster, use kubectl port-forward to tunnel
-into the workspace pod:
+1. Port-forward the MCP service:
 
-  kubectl port-forward pod/<workspace-pod> 7681:7681
+  kubectl port-forward svc/chemuxer-mcp 3001:3001 -n <your-namespace>
 
-Then call the API at http://localhost:7681. No authentication token is needed
-over the tunnel — kubectl handles authorization via your kubeconfig.
+2. Configure your MCP client (e.g., ~/.claude/settings.json):
 
-## Sessions
+  {
+    "mcpServers": {
+      "chemuxer": {
+        "type": "sse",
+        "url": "http://localhost:3001/sse"
+      }
+    }
+  }
+
+Available MCP tools: list_workspaces, list_terminals, get_terminal_output,
+send_terminal_input, create_terminal, close_terminal, get_activity_feed.
+
+All tools accept a "workspace" parameter to target a specific workspace.
+get_activity_feed can omit "workspace" for a cross-workspace activity view.
+
+See: https://github.com/che-incubator/chemuxer/tree/main/packages/chemuxer-mcp
+
+## In-workspace agents
+
+If your agent runs inside the same workspace pod, use the REST API directly
+at http://localhost:7681. No authentication is needed.
+
+### Sessions
 
 List all sessions:
   GET /api/sessions
@@ -42,7 +64,7 @@ Rename a session:
   PATCH /api/sessions/{id}
   Body: { "title": "new name" }
 
-## Terminal I/O
+### Terminal I/O
 
 Read the current terminal buffer (plain text, no ANSI codes):
   GET /api/sessions/{id}/buffer
@@ -52,7 +74,7 @@ Send input to a session (include \\\\r for Enter):
   POST /api/sessions/{id}/input
   Body: { "data": "ls -la\\\\r" }
 
-## Activity Feed
+### Activity Feed
 
 The feed provides periodic text snapshots of terminal output.
 Use it to catch up on recent activity without maintaining a connection.
