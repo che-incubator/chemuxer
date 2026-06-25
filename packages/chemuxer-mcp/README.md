@@ -87,7 +87,7 @@ Runtime tuning via environment variables (no image rebuild needed):
 # From the monorepo root
 npm install
 npm run build -w packages/shared
-npm test -w packages/chemuxer-mcp    # 214 tests
+npm test -w packages/chemuxer-mcp
 npm run build -w packages/chemuxer-mcp
 ```
 
