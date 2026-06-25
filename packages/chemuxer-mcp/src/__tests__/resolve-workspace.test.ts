@@ -59,46 +59,30 @@ describe('resolveWorkspace', () => {
 
   it('throws WORKSPACE_NOT_FOUND for missing workspace', async () => {
     const store = makeStore(new Map());
-    await expect(() => resolveWorkspace(store, resolver, 'no-such-ws')).rejects.toThrow(ToolError);
-    try {
-      await resolveWorkspace(store, resolver, 'no-such-ws');
-    } catch (err) {
-      expect(err).toBeInstanceOf(ToolError);
-      expect((err as ToolError).errorCode).toBe('WORKSPACE_NOT_FOUND');
-    }
+    await expect(resolveWorkspace(store, resolver, 'no-such-ws')).rejects.toMatchObject({
+      errorCode: 'WORKSPACE_NOT_FOUND',
+    });
   });
 
   it('throws WORKSPACE_IDLED for idled workspace', async () => {
     const store = makeStore(new Map([['idled-ws', idledWorkspace]]));
-    await expect(() => resolveWorkspace(store, resolver, 'idled-ws')).rejects.toThrow(ToolError);
-    try {
-      await resolveWorkspace(store, resolver, 'idled-ws');
-    } catch (err) {
-      expect(err).toBeInstanceOf(ToolError);
-      expect((err as ToolError).errorCode).toBe('WORKSPACE_IDLED');
-    }
+    await expect(resolveWorkspace(store, resolver, 'idled-ws')).rejects.toMatchObject({
+      errorCode: 'WORKSPACE_IDLED',
+    });
   });
 
   it('throws WORKSPACE_NOT_READY for non-ready workspace', async () => {
     const store = makeStore(new Map([['starting-ws', notReadyWorkspace]]));
-    await expect(() => resolveWorkspace(store, resolver, 'starting-ws')).rejects.toThrow(ToolError);
-    try {
-      await resolveWorkspace(store, resolver, 'starting-ws');
-    } catch (err) {
-      expect(err).toBeInstanceOf(ToolError);
-      expect((err as ToolError).errorCode).toBe('WORKSPACE_NOT_READY');
-      expect((err as ToolError).message).toContain('Pending');
-    }
+    await expect(resolveWorkspace(store, resolver, 'starting-ws')).rejects.toMatchObject({
+      errorCode: 'WORKSPACE_NOT_READY',
+      message: expect.stringContaining('Pending'),
+    });
   });
 
   it('throws WORKSPACE_UNREACHABLE for ready workspace without endpoint', async () => {
     const store = makeStore(new Map([['no-ip-ws', readyNoEndpoint]]));
-    await expect(() => resolveWorkspace(store, resolver, 'no-ip-ws')).rejects.toThrow(ToolError);
-    try {
-      await resolveWorkspace(store, resolver, 'no-ip-ws');
-    } catch (err) {
-      expect(err).toBeInstanceOf(ToolError);
-      expect((err as ToolError).errorCode).toBe('WORKSPACE_UNREACHABLE');
-    }
+    await expect(resolveWorkspace(store, resolver, 'no-ip-ws')).rejects.toMatchObject({
+      errorCode: 'WORKSPACE_UNREACHABLE',
+    });
   });
 });
