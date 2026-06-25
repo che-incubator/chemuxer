@@ -4,7 +4,7 @@
 - **Status**: Superseded
 - **Deciders**: @akurinnoy, cross-model LLM council (Claude Opus 4.6, Gemini 3 Pro, GPT-5.3 Codex)
 - **Tags**: kubernetes, networking, architecture
-- **Superseded by**: PortForward API (see ADR-013 or equivalent)
+- **Superseded by**: [ADR-013](013-portforward-for-local-pod-connectivity.md)
 
 ## Context and Problem Statement
 

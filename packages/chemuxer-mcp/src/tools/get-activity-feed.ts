@@ -77,21 +77,11 @@ export function registerGetActivityFeed(
           }
         }
 
-        // Count ready workspaces (those with resolved endpoints)
-        const readyWorkspaces = [];
-        for (const ws of workspaces) {
-          if (ws.ready && !ws.idled) {
-            const endpoint = await resolver.resolve(ws);
-            if (endpoint !== null) {
-              readyWorkspaces.push(ws);
-            }
-          }
-        }
+        const resolvedCount = result.resolvedCount;
         const failedCount = result.partialFailures?.length ?? 0;
-        const succeededCount = readyWorkspaces.length - failedCount;
+        const succeededCount = resolvedCount - failedCount;
 
-        // If zero entries AND partialFailures covers all ready workspaces → isError
-        if (entries.length === 0 && readyWorkspaces.length > 0 && failedCount >= readyWorkspaces.length) {
+        if (entries.length === 0 && resolvedCount > 0 && failedCount >= resolvedCount) {
           return {
             content: [
               {
@@ -111,7 +101,7 @@ export function registerGetActivityFeed(
           entries,
           nextSince,
           status: {
-            total: readyWorkspaces.length,
+            total: resolvedCount,
             succeeded: succeededCount,
             failed: failedCount,
           },

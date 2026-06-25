@@ -10,6 +10,7 @@ export type AugmentedFeedEntry = FeedEntry & { workspace_name: string };
 export interface FanOutResult {
   entries: AugmentedFeedEntry[];
   nextSince: string | null;
+  resolvedCount: number;
   partialFailures?: Array<{ workspace_name: string; code: ErrorCode; message: string }>;
 }
 
@@ -51,7 +52,7 @@ export async function fanOutFeed(
   }
 
   if (readyWithEndpoints.length === 0) {
-    return { entries: [], nextSince: null };
+    return { entries: [], nextSince: null, resolvedCount: 0 };
   }
 
   // Semaphore-based bounded worker pool
@@ -163,7 +164,7 @@ export async function fanOutFeed(
     nextSince = since;
   }
 
-  const result: FanOutResult = { entries: allEntries, nextSince };
+  const result: FanOutResult = { entries: allEntries, nextSince, resolvedCount: readyWithEndpoints.length };
   if (partialFailures.length > 0) {
     result.partialFailures = partialFailures;
   }

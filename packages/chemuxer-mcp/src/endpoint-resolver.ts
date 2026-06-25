@@ -18,6 +18,7 @@ export class DirectEndpointResolver implements EndpointResolver {
 interface Tunnel {
   server: net.Server;
   localPort: number;
+  sockets: Set<net.Socket>;
 }
 
 export class PortForwardEndpointResolver implements EndpointResolver {
@@ -27,6 +28,7 @@ export class PortForwardEndpointResolver implements EndpointResolver {
   private readonly tunnels = new Map<string, Tunnel>();
   private readonly pendingTunnels = new Map<string, Promise<Tunnel>>();
   private readonly portForward: k8s.PortForward;
+  private shuttingDown = false;
 
   constructor(kc: k8s.KubeConfig, namespace: string, defaultPort: number) {
     this.kc = kc;
@@ -36,7 +38,7 @@ export class PortForwardEndpointResolver implements EndpointResolver {
   }
 
   async resolve(ws: WorkspaceInfo): Promise<string | null> {
-    if (!ws.ready) return null;
+    if (this.shuttingDown || !ws.ready) return null;
 
     const existing = this.tunnels.get(ws.pod_name);
     if (existing) {
@@ -62,7 +64,10 @@ export class PortForwardEndpointResolver implements EndpointResolver {
   }
 
   private async createTunnel(podName: string): Promise<Tunnel> {
+    const sockets = new Set<net.Socket>();
     const server = net.createServer((socket) => {
+      sockets.add(socket);
+      socket.once('close', () => sockets.delete(socket));
       this.portForward
         .portForward(this.namespace, podName, [this.defaultPort], socket, null, socket)
         .catch((err) => {
@@ -74,25 +79,36 @@ export class PortForwardEndpointResolver implements EndpointResolver {
     const localPort = await new Promise<number>((resolve, reject) => {
       server.once('error', reject);
       server.listen(0, '127.0.0.1', () => {
-        resolve((server.address() as net.AddressInfo).port);
+        const addr = server.address();
+        if (!addr || typeof addr === 'string') {
+          reject(new Error('Failed to get server address'));
+          return;
+        }
+        resolve(addr.port);
       });
     });
 
-    // Add persistent error handler for runtime errors
     server.on('error', (err) => {
       console.error(`Server error for pod ${podName} on port ${localPort}:`, err);
     });
 
-    const tunnel: Tunnel = { server, localPort };
+    const tunnel: Tunnel = { server, localPort, sockets };
     this.tunnels.set(podName, tunnel);
     return tunnel;
   }
 
   async shutdown(): Promise<void> {
+    this.shuttingDown = true;
+    await Promise.allSettled(Array.from(this.pendingTunnels.values()));
     const closes = Array.from(this.tunnels.values()).map(
-      (t) => new Promise<void>((resolve) => t.server.close(() => resolve())),
+      (t) =>
+        new Promise<void>((resolve) => {
+          for (const socket of t.sockets) socket.destroy();
+          t.server.close(() => resolve());
+        }),
     );
     await Promise.allSettled(closes);
+    this.pendingTunnels.clear();
     this.tunnels.clear();
   }
 }
