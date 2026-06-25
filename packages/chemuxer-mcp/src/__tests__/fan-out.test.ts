@@ -1,9 +1,12 @@
 import { describe, it, expect, vi } from 'vitest';
 import { fanOutFeed } from '../fan-out.js';
+import { DirectEndpointResolver } from '../endpoint-resolver.js';
 import { UpstreamError } from '../chemuxer-client.js';
 import type { WorkspaceInfo } from '../workspace-store.js';
 import type { ChemuxerClient } from '../chemuxer-client.js';
 import type { FeedResponse } from '@chemuxer/shared';
+
+const resolver = new DirectEndpointResolver();
 
 function makeWs(name: string, endpoint: string | null = 'http://10.0.0.1:7681'): WorkspaceInfo {
   return {
@@ -28,6 +31,17 @@ function feedResponse(entries: Array<{ timestamp: string; sessionId: string; con
 }
 
 describe('fanOutFeed', () => {
+  it('uses resolved endpoint instead of ws.endpoint', async () => {
+    const getFeed = vi.fn().mockResolvedValue(feedResponse([], 'ts-0'));
+    const stubResolver = {
+      resolve: vi.fn().mockReturnValue('http://resolved:9999'),
+    };
+
+    await fanOutFeed([makeWs('ws-a', 'http://original:7681')], makeClient(getFeed), stubResolver);
+
+    expect(getFeed).toHaveBeenCalledWith('http://resolved:9999', undefined, undefined);
+  });
+
   it('merges entries from 2 workspaces chronologically', async () => {
     const getFeed = vi.fn<ChemuxerClient['getFeed']>()
       .mockImplementation(async (endpoint) => {
@@ -49,6 +63,7 @@ describe('fanOutFeed', () => {
     const result = await fanOutFeed(
       [makeWs('ws-a', 'http://ws-a:7681'), makeWs('ws-b', 'http://ws-b:7681')],
       makeClient(getFeed),
+      resolver,
     );
 
     expect(result.entries).toHaveLength(3);
@@ -78,6 +93,7 @@ describe('fanOutFeed', () => {
     const result = await fanOutFeed(
       [makeWs('ws-b', 'http://ws-b:7681'), makeWs('ws-a', 'http://ws-a:7681')],
       makeClient(getFeed),
+      resolver,
     );
 
     // Same timestamp → sorted by workspace_name ASC: ws-a before ws-b
@@ -102,6 +118,7 @@ describe('fanOutFeed', () => {
     const result = await fanOutFeed(
       [makeWs('ws-good', 'http://ws-good:7681'), makeWs('ws-bad', 'http://ws-bad:7681')],
       makeClient(getFeed),
+      resolver,
     );
 
     expect(result.entries).toHaveLength(1);
@@ -128,7 +145,7 @@ describe('fanOutFeed', () => {
       makeWs(`ws-${i}`, `http://ws-${i}:7681`),
     );
 
-    await fanOutFeed(workspaces, makeClient(getFeed), { concurrency: 2 });
+    await fanOutFeed(workspaces, makeClient(getFeed), resolver, { concurrency: 2 });
 
     expect(maxConcurrent).toBeLessThanOrEqual(2);
     expect(getFeed).toHaveBeenCalledTimes(5);
@@ -152,7 +169,7 @@ describe('fanOutFeed', () => {
       makeWs(`ws-${i}`, `http://ws-${i}:7681`),
     );
 
-    const result = await fanOutFeed(workspaces, makeClient(getFeed), {
+    const result = await fanOutFeed(workspaces, makeClient(getFeed), resolver, {
       concurrency: 1,
       budgetMs: 250,
       now: fakeClock,
@@ -178,6 +195,7 @@ describe('fanOutFeed', () => {
     const result = await fanOutFeed(
       [makeWs('ws-ready', 'http://ws:7681'), makeWs('ws-not-ready', null)],
       makeClient(getFeed),
+      resolver,
     );
 
     expect(getFeed).toHaveBeenCalledTimes(1);
@@ -185,7 +203,7 @@ describe('fanOutFeed', () => {
   });
 
   it('empty input returns empty result', async () => {
-    const result = await fanOutFeed([], makeClient());
+    const result = await fanOutFeed([], makeClient(), resolver);
 
     expect(result.entries).toHaveLength(0);
     expect(result.nextSince).toBeNull();
@@ -199,6 +217,7 @@ describe('fanOutFeed', () => {
     const result = await fanOutFeed(
       [makeWs('ws-a', 'http://ws-a:7681'), makeWs('ws-b', 'http://ws-b:7681')],
       makeClient(getFeed),
+      resolver,
     );
 
     expect(result.entries).toHaveLength(0);
@@ -218,6 +237,7 @@ describe('fanOutFeed', () => {
     const result = await fanOutFeed(
       [makeWs('ws-a', 'http://ws-a:7681'), makeWs('ws-b', 'http://ws-b:7681')],
       makeClient(getFeed),
+      resolver,
     );
 
     expect(result.nextSince).toBe('2026-01-01T00:00:10Z');
@@ -230,6 +250,7 @@ describe('fanOutFeed', () => {
     const result = await fanOutFeed(
       [makeWs('ws-a', 'http://ws-a:7681')],
       makeClient(getFeed),
+      resolver,
       { since: '2026-01-01T00:00:00Z' },
     );
 
@@ -244,6 +265,7 @@ describe('fanOutFeed', () => {
     const result = await fanOutFeed(
       [makeWs('ws-a', 'http://ws-a:7681')],
       makeClient(getFeed),
+      resolver,
     );
 
     expect(result.partialFailures).toHaveLength(1);
@@ -269,7 +291,7 @@ describe('fanOutFeed', () => {
         return feedResponse(entries, `ts-${wsIndex}`);
       });
 
-    const result = await fanOutFeed(workspaces, makeClient(getFeed), { concurrency: 10 });
+    const result = await fanOutFeed(workspaces, makeClient(getFeed), resolver, { concurrency: 10 });
 
     expect(result.entries).toHaveLength(100);
     expect(result.partialFailures).toBeUndefined();

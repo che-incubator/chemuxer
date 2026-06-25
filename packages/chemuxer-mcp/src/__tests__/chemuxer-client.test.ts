@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createServer, type Server, type IncomingMessage, type ServerResponse } from 'node:http';
 import { ChemuxerClient, UpstreamError } from '../chemuxer-client.js';
 import type { SessionInfo, FeedResponse } from '@chemuxer/shared';
+import * as k8s from '@kubernetes/client-node';
 
 // --- Canned data ---
 
@@ -199,5 +200,79 @@ describe('ChemuxerClient', () => {
       expect((err as UpstreamError).statusCode).toBe(503);
       expect((err as UpstreamError).body).toBe('Service Unavailable');
     }
+  });
+});
+
+describe('ChemuxerClient with kubeConfig', () => {
+  it('applies auth headers when kubeConfig is provided and URL is https', async () => {
+    const kc = new k8s.KubeConfig();
+    kc.loadFromOptions({
+      clusters: [{ name: 'test', server: 'https://api.example.com' }],
+      users: [{ name: 'user', token: 'test-token-123' }],
+      contexts: [{ name: 'ctx', cluster: 'test', user: 'user' }],
+      currentContext: 'ctx',
+    });
+
+    let capturedHeaders: Record<string, string> = {};
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === 'string' ? input : input.toString();
+      // Capture headers for https requests
+      if (url.startsWith('https://')) {
+        capturedHeaders = Object.fromEntries(
+          new Headers(init?.headers).entries(),
+        );
+      }
+      // Mock a successful response
+      return new Response(JSON.stringify([]), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    };
+
+    try {
+      const client = new ChemuxerClient({ timeoutMs: 2000, kubeConfig: kc });
+      // Make a request to an https URL (pod proxy path)
+      await client.listSessions('https://api.example.com/api/v1/namespaces/ns/pods/pod:7681/proxy');
+
+      // Verify auth headers were applied
+      expect(capturedHeaders['authorization']).toBe('Bearer test-token-123');
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it('does not apply auth headers for http URLs', async () => {
+    const kc = new k8s.KubeConfig();
+    kc.loadFromOptions({
+      clusters: [{ name: 'test', server: 'https://api.example.com' }],
+      users: [{ name: 'user', token: 'test-token-123' }],
+      contexts: [{ name: 'ctx', cluster: 'test', user: 'user' }],
+      currentContext: 'ctx',
+    });
+
+    let capturedHeaders: Record<string, string> = {};
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+      capturedHeaders = Object.fromEntries(
+        new Headers(init?.headers).entries(),
+      );
+      return new Response(JSON.stringify([]), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    };
+
+    try {
+      const client = new ChemuxerClient({ timeoutMs: 2000, kubeConfig: kc });
+      // Make a request to an http URL (direct pod IP)
+      await client.listSessions(endpoint); // endpoint is http://127.0.0.1:...
+
+      // Verify auth headers were NOT applied
+      expect(capturedHeaders['authorization']).toBeUndefined();
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it('works without kubeConfig provided', async () => {
+    const client = new ChemuxerClient({ timeoutMs: 2000 });
+    // Should work normally without kubeConfig
+    const sessions = await client.listSessions(endpoint);
+    expect(sessions).toEqual(SESSIONS);
   });
 });

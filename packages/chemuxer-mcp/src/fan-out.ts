@@ -1,6 +1,7 @@
 import type { FeedEntry } from '@chemuxer/shared';
 import type { WorkspaceInfo } from './workspace-store.js';
 import type { ChemuxerClient } from './chemuxer-client.js';
+import type { EndpointResolver } from './endpoint-resolver.js';
 import type { ErrorCode } from './errors.js';
 import { classifyError } from './tools/tool-helpers.js';
 
@@ -23,6 +24,7 @@ type TaskResult =
 export async function fanOutFeed(
   workspaces: WorkspaceInfo[],
   client: ChemuxerClient,
+  resolver: EndpointResolver,
   opts?: {
     since?: string;
     sessionId?: string;
@@ -40,9 +42,12 @@ export async function fanOutFeed(
   const deadline = now() + budgetMs;
 
   // Step 1: filter to workspaces with endpoints
-  const ready = workspaces.filter((ws) => !!ws.endpoint);
+  const readyWithEndpoints = workspaces
+    .filter((ws) => ws.ready && !ws.idled)
+    .map((ws) => ({ ws, endpoint: resolver.resolve(ws) }))
+    .filter((entry): entry is { ws: WorkspaceInfo; endpoint: string } => entry.endpoint !== null);
 
-  if (ready.length === 0) {
+  if (readyWithEndpoints.length === 0) {
     return { entries: [], nextSince: null };
   }
 
@@ -71,7 +76,7 @@ export async function fanOutFeed(
 
   const tasks: Promise<TaskResult>[] = [];
 
-  for (const ws of ready) {
+  for (const { ws, endpoint } of readyWithEndpoints) {
     // Budget check before dispatching
     if (now() >= deadline) {
       tasks.push(Promise.resolve({
@@ -96,7 +101,7 @@ export async function fanOutFeed(
         };
       }
       try {
-        const resp = await client.getFeed(ws.endpoint!, sessionId, since);
+        const resp = await client.getFeed(endpoint, sessionId, since);
         const entries: AugmentedFeedEntry[] = resp.entries.map((e) => ({
           ...e,
           workspace_name: ws.workspace_name,

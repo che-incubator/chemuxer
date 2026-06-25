@@ -1,14 +1,18 @@
 import type { SessionInfo, FeedResponse } from '@chemuxer/shared';
+import type * as k8s from '@kubernetes/client-node';
 
 export interface ChemuxerClientOptions {
   timeoutMs?: number; // default 2000
+  kubeConfig?: k8s.KubeConfig;
 }
 
 export class ChemuxerClient {
   private readonly timeoutMs: number;
+  private readonly kubeConfig?: k8s.KubeConfig;
 
   constructor(options: ChemuxerClientOptions = {}) {
     this.timeoutMs = options.timeoutMs ?? 2000;
+    this.kubeConfig = options.kubeConfig;
   }
 
   async listSessions(endpoint: string): Promise<SessionInfo[]> {
@@ -42,28 +46,48 @@ export class ChemuxerClient {
     return this.get<FeedResponse>(path);
   }
 
+  private async applyAuthOptions(url: string, init: RequestInit): Promise<RequestInit> {
+    if (!this.kubeConfig) return init;
+    // Only apply auth for K8s API server URLs (https://)
+    // Direct pod IP URLs (http://) don't need auth
+    if (!url.startsWith('https://')) return init;
+
+    const opts: { headers: Record<string, string> } = { headers: {} };
+    await this.kubeConfig.applyToHTTPSOptions(opts as Parameters<k8s.KubeConfig['applyToHTTPSOptions']>[0]);
+    const authHeaders = opts.headers;
+    return {
+      ...init,
+      headers: { ...(init.headers as Record<string, string> | undefined), ...authHeaders },
+    };
+  }
+
   private async get<T>(url: string): Promise<T> {
-    const res = await fetch(url, { signal: AbortSignal.timeout(this.timeoutMs) });
+    const init = await this.applyAuthOptions(url, {
+      signal: AbortSignal.timeout(this.timeoutMs),
+    });
+    const res = await fetch(url, init);
     if (!res.ok) throw new UpstreamError(res.status, await res.text());
     return res.json() as Promise<T>;
   }
 
   private async post<T>(url: string, body: unknown): Promise<T> {
-    const res = await fetch(url, {
+    const init = await this.applyAuthOptions(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
       signal: AbortSignal.timeout(this.timeoutMs),
     });
+    const res = await fetch(url, init);
     if (!res.ok) throw new UpstreamError(res.status, await res.text());
     return res.json() as Promise<T>;
   }
 
   private async del(url: string): Promise<void> {
-    const res = await fetch(url, {
+    const init = await this.applyAuthOptions(url, {
       method: 'DELETE',
       signal: AbortSignal.timeout(this.timeoutMs),
     });
+    const res = await fetch(url, init);
     if (!res.ok) throw new UpstreamError(res.status, await res.text());
   }
 }

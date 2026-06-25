@@ -4,6 +4,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
 import type { WorkspaceStore } from './workspace-store.js';
 import type { ChemuxerClient } from './chemuxer-client.js';
+import type { EndpointResolver } from './endpoint-resolver.js';
 import { createHealthRouter } from './health.js';
 import { registerListWorkspaces } from './tools/list-workspaces.js';
 import { registerListTerminals } from './tools/list-terminals.js';
@@ -13,21 +14,24 @@ import { registerGetTerminalOutput } from './tools/get-terminal-output.js';
 import { registerSendTerminalInput } from './tools/send-terminal-input.js';
 import { registerGetActivityFeed } from './tools/get-activity-feed.js';
 
-function createMcpServer(store: WorkspaceStore, client: ChemuxerClient): McpServer {
+function createMcpServer(store: WorkspaceStore, client: ChemuxerClient, resolver: EndpointResolver): McpServer {
   const server = new McpServer({ name: 'chemuxer-mcp', version: '0.1.0' });
-  registerListWorkspaces(server, store);
-  registerListTerminals(server, store, client);
-  registerCreateTerminal(server, store, client);
-  registerCloseTerminal(server, store, client);
-  registerGetTerminalOutput(server, store, client);
-  registerSendTerminalInput(server, store, client);
-  registerGetActivityFeed(server, store, client);
+  registerListWorkspaces(server, store, resolver);
+  registerListTerminals(server, store, client, resolver);
+  registerCreateTerminal(server, store, client, resolver);
+  registerCloseTerminal(server, store, client, resolver);
+  registerGetTerminalOutput(server, store, client, resolver);
+  registerSendTerminalInput(server, store, client, resolver);
+  registerGetActivityFeed(server, store, client, resolver);
   return server;
 }
+
+export { createMcpServer };
 
 export interface AppDeps {
   store: WorkspaceStore;
   client: ChemuxerClient;
+  resolver: EndpointResolver;
 }
 
 export interface AppHandle {
@@ -38,7 +42,7 @@ export interface AppHandle {
 }
 
 export function createApp(deps: AppDeps): AppHandle {
-  const { store, client } = deps;
+  const { store, client, resolver } = deps;
   const app = express();
   const httpServer = createServer(app);
 
@@ -57,7 +61,7 @@ export function createApp(deps: AppDeps): AppHandle {
     let mcpServer: McpServer | undefined;
     try {
       transport = new SSEServerTransport('/messages', res);
-      mcpServer = createMcpServer(store, client);
+      mcpServer = createMcpServer(store, client, resolver);
       await mcpServer.connect(transport);
       sessions.set(transport.sessionId, { transport, mcpServer });
 

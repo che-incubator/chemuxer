@@ -2,6 +2,7 @@ import * as z from 'zod/v4';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { WorkspaceStore } from '../workspace-store.js';
 import type { ChemuxerClient } from '../chemuxer-client.js';
+import type { EndpointResolver } from '../endpoint-resolver.js';
 import { resolveWorkspace } from '../resolve-workspace.js';
 import { sessionIdSchema, makeWorkspaceStatus, handleToolError } from './tool-helpers.js';
 
@@ -9,6 +10,7 @@ export function registerGetTerminalOutput(
   server: McpServer,
   store: WorkspaceStore,
   client: ChemuxerClient,
+  resolver: EndpointResolver,
 ): void {
   server.registerTool(
     'get_terminal_output',
@@ -23,8 +25,8 @@ export function registerGetTerminalOutput(
     },
     async ({ workspace, session_id, max_bytes }) => {
       try {
-        const ws = resolveWorkspace(store, workspace);
-        const content = await client.getBuffer(ws.endpoint!, session_id);
+        const ws = resolveWorkspace(store, resolver, workspace);
+        const content = await client.getBuffer(ws.resolvedEndpoint, session_id);
 
         const encoder = new TextEncoder();
         const bytes = encoder.encode(content);

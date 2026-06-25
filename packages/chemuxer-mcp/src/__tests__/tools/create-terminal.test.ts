@@ -3,9 +3,12 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { registerCreateTerminal } from '../../tools/create-terminal.js';
+import { DirectEndpointResolver } from '../../endpoint-resolver.js';
 import type { WorkspaceInfo } from '../../workspace-store.js';
 import type { ChemuxerClient } from '../../chemuxer-client.js';
 import type { SessionInfo } from '@chemuxer/shared';
+
+const resolver = new DirectEndpointResolver();
 
 function makeStore(entries: WorkspaceInfo[]) {
   return {
@@ -33,7 +36,7 @@ async function callCreateTerminal(
   args: { workspace: string },
 ) {
   const server = new McpServer({ name: 'test', version: '0.0.1' });
-  registerCreateTerminal(server, store, client);
+  registerCreateTerminal(server, store, client, resolver);
 
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
   const mcpClient = new Client({ name: 'test-client', version: '0.0.1' });
@@ -69,7 +72,7 @@ const notReadyWorkspace: WorkspaceInfo = {
   phase: 'Starting',
   ready: false,
   idled: false,
-  endpoint: undefined,
+  endpoint: null,
 };
 
 describe('create_terminal tool', () => {
@@ -94,6 +97,25 @@ describe('create_terminal tool', () => {
     expect(body.workspace_status.ready).toBe(true);
 
     expect(client.createSession).toHaveBeenCalledWith('http://10.0.0.1:7681');
+  });
+
+  it('uses resolved endpoint from resolver, not ws.endpoint directly', async () => {
+    const stubResolver = { resolve: () => 'http://resolved:9999' } as unknown as import('../../endpoint-resolver.js').EndpointResolver;
+    const client = makeClient({ createSession: vi.fn().mockResolvedValue({
+      id: 'sess', shell: '/bin/bash', title: 'bash', renamed: false, createdAt: 1000,
+    }) });
+    const store = makeStore([readyWorkspace]);
+
+    const server = new McpServer({ name: 'test', version: '0.0.1' });
+    registerCreateTerminal(server, store, client, stubResolver);
+    const [ct, st] = InMemoryTransport.createLinkedPair();
+    const mc = new Client({ name: 'tc', version: '0.0.1' });
+    await Promise.all([mc.connect(ct), server.connect(st)]);
+    await mc.callTool({ name: 'create_terminal', arguments: { workspace: 'ready-ws' } });
+    await mc.close();
+    await server.close();
+
+    expect(client.createSession).toHaveBeenCalledWith('http://resolved:9999');
   });
 
   it('returns WORKSPACE_NOT_READY for non-ready workspace', async () => {

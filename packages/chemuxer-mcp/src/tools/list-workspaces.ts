@@ -1,8 +1,9 @@
 import * as z from 'zod/v4';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { WorkspaceStore } from '../workspace-store.js';
+import type { EndpointResolver } from '../endpoint-resolver.js';
 
-export function registerListWorkspaces(server: McpServer, store: WorkspaceStore): void {
+export function registerListWorkspaces(server: McpServer, store: WorkspaceStore, resolver: EndpointResolver): void {
   server.registerTool(
     'list_workspaces',
     {
@@ -18,7 +19,7 @@ export function registerListWorkspaces(server: McpServer, store: WorkspaceStore)
         phase: ws.phase,
         ready: ws.ready,
         idled: ws.idled,
-        endpoint: ws.endpoint,
+        endpoint: ws.ready && !ws.idled ? resolver.resolve(ws) : null,
         ...((!ws.ready || ws.idled) && {
           reason: [
             ws.idled && 'Workspace is idled',

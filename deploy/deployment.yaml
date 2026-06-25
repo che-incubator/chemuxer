@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chemuxer-mcp
+  labels:
+    app: chemuxer-mcp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: chemuxer-mcp
+  template:
+    metadata:
+      labels:
+        app: chemuxer-mcp
+    spec:
+      serviceAccountName: chemuxer-mcp
+      containers:
+        - name: chemuxer-mcp
+          image: quay.io/che-incubator/chemuxer-mcp:next
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3001
+              protocol: TCP
+          env:
+            - name: NODE_ENV
+              value: "production"
+            - name: CHEMUXER_MCP_TRANSPORT
+              value: "sse"
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 3001
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 3001
+            initialDelaySeconds: 3
+            periodSeconds: 5

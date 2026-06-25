@@ -1,7 +1,10 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import type { WorkspaceStore } from '../workspace-store.js';
 import type { ChemuxerClient } from '../chemuxer-client.js';
+import { DirectEndpointResolver } from '../endpoint-resolver.js';
 import { createApp, type AppHandle } from '../app.js';
+
+const resolver = new DirectEndpointResolver();
 
 const mockStore = {
   get synced() {
@@ -25,7 +28,7 @@ afterEach(async () => {
 });
 
 async function startApp(): Promise<{ endpoint: string; handle: AppHandle }> {
-  const h = createApp({ store: mockStore, client: mockClient });
+  const h = createApp({ store: mockStore, client: mockClient, resolver });
   await h.start(0, '127.0.0.1');
   const addr = h.httpServer.address();
   const port = typeof addr === 'object' && addr !== null ? addr.port : 0;
