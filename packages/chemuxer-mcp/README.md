@@ -6,7 +6,24 @@ Namespace-level MCP server for AI agent oversight of Chemuxer terminal sessions 
 
 A Kubernetes Informer watches DevWorkspace-labeled pods in the user's namespace, discovers running Chemuxer instances, and proxies requests to their REST APIs. The server exposes 7 MCP tools via SSE transport on port 3001, giving an external agent a single endpoint to manage terminals across multiple workspaces.
 
-## Connect your agent
+## Local development (stdio)
+
+Run directly from a local checkout — no port-forward needed:
+
+```bash
+# Build
+npm install && npm run build -w packages/shared && npm run build -w packages/chemuxer-mcp
+
+# Register with Claude Code
+claude mcp add chemuxer-mcp -- node packages/chemuxer-mcp/dist/index.js --namespace <your-namespace>
+
+# Or run directly
+NAMESPACE=my-namespace node packages/chemuxer-mcp/dist/index.js
+```
+
+Requires `pods/proxy` RBAC permission in the target namespace.
+
+## On-cluster (SSE)
 
 Port-forward the MCP service to your laptop:
 
