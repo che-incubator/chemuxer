@@ -34,7 +34,7 @@ export function registerGetActivityFeed(
       try {
         if (workspace) {
           // Single-workspace mode
-          const ws = resolveWorkspace(store, resolver, workspace);
+          const ws = await resolveWorkspace(store, resolver, workspace);
           const resp = await client.getFeed(ws.resolvedEndpoint, session_id, since);
           const entries = resp.entries
             .slice(0, effectiveLimit)
@@ -78,7 +78,15 @@ export function registerGetActivityFeed(
         }
 
         // Count ready workspaces (those with resolved endpoints)
-        const readyWorkspaces = workspaces.filter((ws) => ws.ready && !ws.idled && resolver.resolve(ws) !== null);
+        const readyWorkspaces = [];
+        for (const ws of workspaces) {
+          if (ws.ready && !ws.idled) {
+            const endpoint = await resolver.resolve(ws);
+            if (endpoint !== null) {
+              readyWorkspaces.push(ws);
+            }
+          }
+        }
         const failedCount = result.partialFailures?.length ?? 0;
         const succeededCount = readyWorkspaces.length - failedCount;
 

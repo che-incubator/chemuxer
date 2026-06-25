@@ -42,10 +42,13 @@ export async function fanOutFeed(
   const deadline = now() + budgetMs;
 
   // Step 1: filter to workspaces with endpoints
-  const readyWithEndpoints = workspaces
-    .filter((ws) => ws.ready && !ws.idled)
-    .map((ws) => ({ ws, endpoint: resolver.resolve(ws) }))
-    .filter((entry): entry is { ws: WorkspaceInfo; endpoint: string } => entry.endpoint !== null);
+  const readyWithEndpoints: Array<{ ws: WorkspaceInfo; endpoint: string }> = [];
+  for (const ws of workspaces.filter((ws) => ws.ready && !ws.idled)) {
+    const endpoint = await resolver.resolve(ws);
+    if (endpoint) {
+      readyWithEndpoints.push({ ws, endpoint });
+    }
+  }
 
   if (readyWithEndpoints.length === 0) {
     return { entries: [], nextSince: null };

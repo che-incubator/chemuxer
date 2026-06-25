@@ -6,11 +6,11 @@ export interface ResolvedWorkspace extends WorkspaceInfo {
   resolvedEndpoint: string;
 }
 
-export function resolveWorkspace(
+export async function resolveWorkspace(
   store: WorkspaceStore,
   resolver: EndpointResolver,
   workspaceName: string,
-): ResolvedWorkspace {
+): Promise<ResolvedWorkspace> {
   const ws = store.get(workspaceName);
   if (!ws) {
     throw new ToolError('WORKSPACE_NOT_FOUND', `Workspace "${workspaceName}" not found`);
@@ -24,7 +24,7 @@ export function resolveWorkspace(
       `Workspace "${workspaceName}" is not ready (phase: ${ws.phase})`,
     );
   }
-  const resolvedEndpoint = resolver.resolve(ws);
+  const resolvedEndpoint = await resolver.resolve(ws);
   if (!resolvedEndpoint) {
     throw new ToolError(
       'WORKSPACE_UNREACHABLE',

@@ -28,14 +28,19 @@ const notReadyWs: WorkspaceInfo = {
 };
 
 describe('DirectEndpointResolver', () => {
-  it('returns ws.endpoint for a ready workspace', () => {
+  it('returns ws.endpoint for a ready workspace', async () => {
     const resolver = new DirectEndpointResolver();
-    expect(resolver.resolve(readyWs)).toBe('http://10.0.0.5:7681');
+    expect(await resolver.resolve(readyWs)).toBe('http://10.0.0.5:7681');
   });
 
-  it('returns null for a workspace without endpoint', () => {
+  it('returns null for a workspace without endpoint', async () => {
     const resolver = new DirectEndpointResolver();
-    expect(resolver.resolve(notReadyWs)).toBeNull();
+    expect(await resolver.resolve(notReadyWs)).toBeNull();
+  });
+
+  it('shutdown is a no-op', async () => {
+    const resolver = new DirectEndpointResolver();
+    await expect(resolver.shutdown()).resolves.toBeUndefined();
   });
 });
 
@@ -51,27 +56,33 @@ describe('PodProxyEndpointResolver', () => {
     return kc;
   }
 
-  it('builds pod proxy URL for a ready workspace', () => {
+  it('builds pod proxy URL for a ready workspace', async () => {
     const kc = makeKubeConfig();
     const resolver = new PodProxyEndpointResolver(kc, 'my-namespace', 7681);
-    const url = resolver.resolve(readyWs);
+    const url = await resolver.resolve(readyWs);
     expect(url).toBe(
       'https://api.cluster.example.com:6443/api/v1/namespaces/my-namespace/pods/my-ws-pod:7681/proxy',
     );
   });
 
-  it('returns null for a workspace that is not ready', () => {
+  it('returns null for a workspace that is not ready', async () => {
     const kc = makeKubeConfig();
     const resolver = new PodProxyEndpointResolver(kc, 'my-namespace', 7681);
-    expect(resolver.resolve(notReadyWs)).toBeNull();
+    expect(await resolver.resolve(notReadyWs)).toBeNull();
   });
 
-  it('strips trailing slash from API server URL', () => {
+  it('strips trailing slash from API server URL', async () => {
     const kc = makeKubeConfig('https://api.example.com/');
     const resolver = new PodProxyEndpointResolver(kc, 'ns', 7681);
-    const url = resolver.resolve(readyWs);
+    const url = await resolver.resolve(readyWs);
     expect(url).toMatch(/^https:\/\/api\.example\.com\/api\/v1/);
     expect(url).not.toContain('//api/v1');
+  });
+
+  it('shutdown is a no-op', async () => {
+    const kc = makeKubeConfig();
+    const resolver = new PodProxyEndpointResolver(kc, 'my-namespace', 7681);
+    await expect(resolver.shutdown()).resolves.toBeUndefined();
   });
 });
 

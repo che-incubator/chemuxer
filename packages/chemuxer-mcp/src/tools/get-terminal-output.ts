@@ -25,7 +25,7 @@ export function registerGetTerminalOutput(
     },
     async ({ workspace, session_id, max_bytes }) => {
       try {
-        const ws = resolveWorkspace(store, resolver, workspace);
+        const ws = await resolveWorkspace(store, resolver, workspace);
         const content = await client.getBuffer(ws.resolvedEndpoint, session_id);
 
         const encoder = new TextEncoder();

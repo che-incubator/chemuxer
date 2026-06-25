@@ -51,39 +51,39 @@ const readyNoEndpoint: WorkspaceInfo = {
 };
 
 describe('resolveWorkspace', () => {
-  it('returns ResolvedWorkspace for a ready workspace', () => {
+  it('returns ResolvedWorkspace for a ready workspace', async () => {
     const store = makeStore(new Map([['my-workspace', readyWorkspace]]));
-    const result = resolveWorkspace(store, resolver, 'my-workspace');
+    const result = await resolveWorkspace(store, resolver, 'my-workspace');
     expect(result.resolvedEndpoint).toBe('http://10.0.0.1:7681');
   });
 
-  it('throws WORKSPACE_NOT_FOUND for missing workspace', () => {
+  it('throws WORKSPACE_NOT_FOUND for missing workspace', async () => {
     const store = makeStore(new Map());
-    expect(() => resolveWorkspace(store, resolver, 'no-such-ws')).toThrow(ToolError);
+    await expect(() => resolveWorkspace(store, resolver, 'no-such-ws')).rejects.toThrow(ToolError);
     try {
-      resolveWorkspace(store, resolver, 'no-such-ws');
+      await resolveWorkspace(store, resolver, 'no-such-ws');
     } catch (err) {
       expect(err).toBeInstanceOf(ToolError);
       expect((err as ToolError).errorCode).toBe('WORKSPACE_NOT_FOUND');
     }
   });
 
-  it('throws WORKSPACE_IDLED for idled workspace', () => {
+  it('throws WORKSPACE_IDLED for idled workspace', async () => {
     const store = makeStore(new Map([['idled-ws', idledWorkspace]]));
-    expect(() => resolveWorkspace(store, resolver, 'idled-ws')).toThrow(ToolError);
+    await expect(() => resolveWorkspace(store, resolver, 'idled-ws')).rejects.toThrow(ToolError);
     try {
-      resolveWorkspace(store, resolver, 'idled-ws');
+      await resolveWorkspace(store, resolver, 'idled-ws');
     } catch (err) {
       expect(err).toBeInstanceOf(ToolError);
       expect((err as ToolError).errorCode).toBe('WORKSPACE_IDLED');
     }
   });
 
-  it('throws WORKSPACE_NOT_READY for non-ready workspace', () => {
+  it('throws WORKSPACE_NOT_READY for non-ready workspace', async () => {
     const store = makeStore(new Map([['starting-ws', notReadyWorkspace]]));
-    expect(() => resolveWorkspace(store, resolver, 'starting-ws')).toThrow(ToolError);
+    await expect(() => resolveWorkspace(store, resolver, 'starting-ws')).rejects.toThrow(ToolError);
     try {
-      resolveWorkspace(store, resolver, 'starting-ws');
+      await resolveWorkspace(store, resolver, 'starting-ws');
     } catch (err) {
       expect(err).toBeInstanceOf(ToolError);
       expect((err as ToolError).errorCode).toBe('WORKSPACE_NOT_READY');
@@ -91,11 +91,11 @@ describe('resolveWorkspace', () => {
     }
   });
 
-  it('throws WORKSPACE_UNREACHABLE for ready workspace without endpoint', () => {
+  it('throws WORKSPACE_UNREACHABLE for ready workspace without endpoint', async () => {
     const store = makeStore(new Map([['no-ip-ws', readyNoEndpoint]]));
-    expect(() => resolveWorkspace(store, resolver, 'no-ip-ws')).toThrow(ToolError);
+    await expect(() => resolveWorkspace(store, resolver, 'no-ip-ws')).rejects.toThrow(ToolError);
     try {
-      resolveWorkspace(store, resolver, 'no-ip-ws');
+      await resolveWorkspace(store, resolver, 'no-ip-ws');
     } catch (err) {
       expect(err).toBeInstanceOf(ToolError);
       expect((err as ToolError).errorCode).toBe('WORKSPACE_UNREACHABLE');

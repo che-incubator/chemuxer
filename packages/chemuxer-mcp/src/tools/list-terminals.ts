@@ -22,7 +22,7 @@ export function registerListTerminals(
     },
     async ({ workspace }) => {
       try {
-        const ws = resolveWorkspace(store, resolver, workspace);
+        const ws = await resolveWorkspace(store, resolver, workspace);
         const sessions = await client.listSessions(ws.resolvedEndpoint);
         return {
           content: [{

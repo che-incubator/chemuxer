@@ -2,13 +2,16 @@ import type * as k8s from '@kubernetes/client-node';
 import type { WorkspaceInfo } from './workspace-store.js';
 
 export interface EndpointResolver {
-  resolve(ws: WorkspaceInfo): string | null;
+  resolve(ws: WorkspaceInfo): Promise<string | null>;
+  shutdown(): Promise<void>;
 }
 
 export class DirectEndpointResolver implements EndpointResolver {
-  resolve(ws: WorkspaceInfo): string | null {
+  async resolve(ws: WorkspaceInfo): Promise<string | null> {
     return ws.endpoint;
   }
+
+  async shutdown(): Promise<void> {}
 }
 
 export class PodProxyEndpointResolver implements EndpointResolver {
@@ -26,10 +29,12 @@ export class PodProxyEndpointResolver implements EndpointResolver {
     this.defaultPort = defaultPort;
   }
 
-  resolve(ws: WorkspaceInfo): string | null {
+  async resolve(ws: WorkspaceInfo): Promise<string | null> {
     if (!ws.ready) return null;
     return `${this.apiServerBase}/api/v1/namespaces/${this.namespace}/pods/${ws.pod_name}:${this.defaultPort}/proxy`;
   }
+
+  async shutdown(): Promise<void> {}
 }
 
 export function createEndpointResolver(
