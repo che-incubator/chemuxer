@@ -3,7 +3,10 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { registerListWorkspaces } from '../../tools/list-workspaces.js';
+import { DirectEndpointResolver } from '../../endpoint-resolver.js';
 import type { WorkspaceInfo } from '../../workspace-store.js';
+
+const resolver = new DirectEndpointResolver();
 
 function makeStore(entries: WorkspaceInfo[]) {
   return {
@@ -14,7 +17,7 @@ function makeStore(entries: WorkspaceInfo[]) {
 
 async function callListWorkspaces(store: ReturnType<typeof makeStore>) {
   const server = new McpServer({ name: 'test', version: '0.0.1' });
-  registerListWorkspaces(server, store);
+  registerListWorkspaces(server, store, resolver);
 
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
   const client = new Client({ name: 'test-client', version: '0.0.1' });

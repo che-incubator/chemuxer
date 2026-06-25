@@ -3,9 +3,12 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { registerGetTerminalOutput } from '../../tools/get-terminal-output.js';
+import { DirectEndpointResolver } from '../../endpoint-resolver.js';
 import { UpstreamError } from '../../chemuxer-client.js';
 import type { WorkspaceInfo } from '../../workspace-store.js';
 import type { ChemuxerClient } from '../../chemuxer-client.js';
+
+const resolver = new DirectEndpointResolver();
 
 function makeStore(entries: WorkspaceInfo[]) {
   return {
@@ -27,7 +30,7 @@ async function callGetTerminalOutput(
   args: { workspace: string; session_id: string; max_bytes?: number },
 ) {
   const server = new McpServer({ name: 'test', version: '0.0.1' });
-  registerGetTerminalOutput(server, store, client);
+  registerGetTerminalOutput(server, store, client, resolver);
 
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
   const mcpClient = new Client({ name: 'test-client', version: '0.0.1' });

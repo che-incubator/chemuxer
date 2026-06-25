@@ -2,6 +2,7 @@ import * as k8s from '@kubernetes/client-node';
 import { loadConfig } from './config.js';
 import { WorkspaceStore } from './workspace-store.js';
 import { ChemuxerClient } from './chemuxer-client.js';
+import { createEndpointResolver } from './endpoint-resolver.js';
 import { createApp } from './app.js';
 
 const config = loadConfig();
@@ -17,11 +18,12 @@ if (!namespace) {
 
 const store = new WorkspaceStore(kc, namespace, config.chemuxerDefaultPort);
 const client = new ChemuxerClient({ timeoutMs: config.requestTimeoutMs });
+const resolver = createEndpointResolver(config.transport, kc, namespace, config.chemuxerDefaultPort);
 
 // Bind the HTTP server first so K8s liveness probes can reach /healthz
 // immediately. The readiness probe at /readyz returns 503 until the
 // store has synced, so there is no risk of serving traffic too early.
-const server = createApp({ store, client });
+const server = createApp({ store, client, resolver });
 try {
   await server.start(config.port, config.host);
 } catch (err) {

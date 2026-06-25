@@ -3,10 +3,13 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { registerGetActivityFeed } from '../../tools/get-activity-feed.js';
+import { DirectEndpointResolver } from '../../endpoint-resolver.js';
 import { UpstreamError } from '../../chemuxer-client.js';
 import type { WorkspaceInfo } from '../../workspace-store.js';
 import type { ChemuxerClient } from '../../chemuxer-client.js';
 import type { FeedResponse } from '@chemuxer/shared';
+
+const resolver = new DirectEndpointResolver();
 
 function makeWs(name: string, endpoint: string | null = 'http://10.0.0.1:7681'): WorkspaceInfo {
   return {
@@ -40,7 +43,7 @@ async function callTool(
   args: Record<string, unknown>,
 ) {
   const server = new McpServer({ name: 'test', version: '0.0.1' });
-  registerGetActivityFeed(server, store, client);
+  registerGetActivityFeed(server, store, client, resolver);
 
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
   const mcpClient = new Client({ name: 'test-client', version: '0.0.1' });

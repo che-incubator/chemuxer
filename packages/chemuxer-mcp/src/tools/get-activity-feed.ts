@@ -2,6 +2,7 @@ import * as z from 'zod/v4';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { WorkspaceStore } from '../workspace-store.js';
 import type { ChemuxerClient } from '../chemuxer-client.js';
+import type { EndpointResolver } from '../endpoint-resolver.js';
 import { resolveWorkspace } from '../resolve-workspace.js';
 import { makeWorkspaceStatus, handleToolError } from './tool-helpers.js';
 import { fanOutFeed } from '../fan-out.js';
@@ -10,6 +11,7 @@ export function registerGetActivityFeed(
   server: McpServer,
   store: WorkspaceStore,
   client: ChemuxerClient,
+  resolver: EndpointResolver,
 ): void {
   server.registerTool(
     'get_activity_feed',
@@ -32,8 +34,8 @@ export function registerGetActivityFeed(
       try {
         if (workspace) {
           // Single-workspace mode
-          const ws = resolveWorkspace(store, workspace);
-          const resp = await client.getFeed(ws.endpoint!, session_id, since);
+          const ws = resolveWorkspace(store, resolver, workspace);
+          const resp = await client.getFeed(ws.resolvedEndpoint, session_id, since);
           const entries = resp.entries
             .slice(0, effectiveLimit)
             .map((e) => ({ ...e, workspace_name: ws.workspace_name }));
@@ -61,7 +63,7 @@ export function registerGetActivityFeed(
 
         // Cross-workspace mode
         const workspaces = store.list();
-        const result = await fanOutFeed(workspaces, client, { since, sessionId: session_id });
+        const result = await fanOutFeed(workspaces, client, resolver, { since, sessionId: session_id });
 
         let { entries } = result;
         let { nextSince } = result;
@@ -75,8 +77,8 @@ export function registerGetActivityFeed(
           }
         }
 
-        // Count ready workspaces (those with endpoints)
-        const readyWorkspaces = workspaces.filter((ws) => !!ws.endpoint);
+        // Count ready workspaces (those with resolved endpoints)
+        const readyWorkspaces = workspaces.filter((ws) => ws.ready && !ws.idled && resolver.resolve(ws) !== null);
         const failedCount = result.partialFailures?.length ?? 0;
         const succeededCount = readyWorkspaces.length - failedCount;
 

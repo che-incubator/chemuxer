@@ -1,10 +1,16 @@
 import type { WorkspaceStore, WorkspaceInfo } from './workspace-store.js';
+import type { EndpointResolver } from './endpoint-resolver.js';
 import { ToolError } from './errors.js';
+
+export interface ResolvedWorkspace extends WorkspaceInfo {
+  resolvedEndpoint: string;
+}
 
 export function resolveWorkspace(
   store: WorkspaceStore,
+  resolver: EndpointResolver,
   workspaceName: string,
-): WorkspaceInfo {
+): ResolvedWorkspace {
   const ws = store.get(workspaceName);
   if (!ws) {
     throw new ToolError('WORKSPACE_NOT_FOUND', `Workspace "${workspaceName}" not found`);
@@ -18,11 +24,12 @@ export function resolveWorkspace(
       `Workspace "${workspaceName}" is not ready (phase: ${ws.phase})`,
     );
   }
-  if (!ws.endpoint) {
+  const resolvedEndpoint = resolver.resolve(ws);
+  if (!resolvedEndpoint) {
     throw new ToolError(
       'WORKSPACE_UNREACHABLE',
       `Workspace "${workspaceName}" is ready but has no reachable endpoint`,
     );
   }
-  return ws;
+  return { ...ws, resolvedEndpoint };
 }
