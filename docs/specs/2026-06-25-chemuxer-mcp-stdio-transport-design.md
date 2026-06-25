@@ -48,7 +48,7 @@ Currently `WorkspaceInfo` has an `endpoint` string field set by `WorkspaceStore`
 
 ### 4. HTTP Transport: Keep SSE
 
-Do not upgrade to StreamableHTTP in this issue. The existing SSE transport (`/sse`, `/messages` endpoints) works, is deployed, has 83 passing tests, and changing it violates the backward compatibility constraint. File a separate issue for StreamableHTTP migration if desired.
+Do not upgrade to StreamableHTTP in this issue. The existing SSE transport (`/sse`, `/messages` endpoints) works, is deployed, has 100+ existing tests, and changing it violates the backward compatibility constraint. File a separate issue for StreamableHTTP migration if desired.
 
 ### 5. Entry Point Structure
 
@@ -115,7 +115,7 @@ No health endpoints in stdio mode. The MCP protocol's initialize/ping handles li
 
 ## Validation
 
-- All 83 existing tests pass unchanged (sse path untouched)
+- All 100+ existing tests pass unchanged (sse path untouched)
 - New tests cover stdio path, config precedence, pod proxy URL construction
 - `claude mcp add chemuxer-mcp -- node packages/chemuxer-mcp/dist/index.js` works from a local machine
 - `npm start -w packages/chemuxer-mcp` with `CHEMUXER_MCP_TRANSPORT=sse` works identically to current behavior

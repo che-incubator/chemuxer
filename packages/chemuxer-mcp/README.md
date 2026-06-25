@@ -4,7 +4,7 @@ Namespace-level MCP server for AI agent oversight of Chemuxer terminal sessions 
 
 ## How it works
 
-A Kubernetes Informer watches DevWorkspace-labeled pods in the user's namespace, discovers running Chemuxer instances, and proxies requests to their REST APIs. The server exposes 7 MCP tools via SSE transport on port 3001, giving an external agent a single endpoint to manage terminals across multiple workspaces.
+A Kubernetes Informer watches DevWorkspace-labeled pods in the user's namespace, discovers running Chemuxer instances, and proxies requests to their REST APIs. The server exposes 7 MCP tools via stdio (local) or SSE (on-cluster) transport, giving an external agent a single endpoint to manage terminals across multiple workspaces.
 
 ## Local development (stdio)
 
@@ -79,6 +79,7 @@ Runtime tuning via environment variables (no image rebuild needed):
 | `NAMESPACE` | (auto) | K8s namespace override (auto-detected from service account) |
 | `CHEMUXER_DEFAULT_PORT` | 7681 | Default Chemuxer port on workspace pods |
 | `REQUEST_TIMEOUT_MS` | 2000 | HTTP timeout for upstream Chemuxer calls |
+| `CHEMUXER_MCP_TRANSPORT` | stdio | Transport mode: `stdio` or `sse` |
 
 ## Development
 
@@ -86,12 +87,16 @@ Runtime tuning via environment variables (no image rebuild needed):
 # From the monorepo root
 npm install
 npm run build -w packages/shared
-npm test -w packages/chemuxer-mcp    # 83 tests
+npm test -w packages/chemuxer-mcp    # 214 tests
 npm run build -w packages/chemuxer-mcp
 ```
 
-To run locally outside a K8s cluster, set the namespace explicitly:
+To run locally outside a K8s cluster (stdio mode, default):
 
 ```bash
+# Uses kubeconfig for auth, connects via K8s API pod proxy
+node packages/chemuxer-mcp/dist/index.js --namespace my-namespace
+
+# Or with env var
 NAMESPACE=my-namespace npm start -w packages/chemuxer-mcp
 ```
