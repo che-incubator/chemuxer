@@ -108,7 +108,7 @@ Settings are stored in `./config/settings.json` and editable via the built-in Mo
 - **Frontend:** React 19, xterm.js 6.x, react-resizable-panels, cmdk, Monaco
 - **Backend:** Node.js, Express 5, ws, node-pty
 - **Shared:** TypeScript end-to-end, shared WebSocket protocol types
-- **Testing:** Vitest (295 tests), Testing Library
+- **Testing:** Vitest, Testing Library
 - **Build:** Vite (frontend), tsc (backend)
 
 ## MCP Server
