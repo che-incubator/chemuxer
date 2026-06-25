@@ -14,3 +14,7 @@ ADRs are immutable — when a decision is revisited, a new ADR supersedes the ol
 | [006](006-websocket-reconnection-with-exponential-backoff.md) | WebSocket reconnection with exponential backoff | Accepted |
 | [007](007-view-only-pane-zoom.md) | View-only pane zoom | Accepted |
 | [008](008-localstorage-layout-persistence.md) | localStorage layout persistence | Accepted |
+| [009](009-rest-api-for-agent-observability.md) | REST API for agent observability | Accepted |
+| [010](010-namespace-level-mcp-server-for-agent-oversight.md) | Namespace-level MCP server for agent oversight | Accepted |
+| [011](011-stdio-transport-for-local-mcp-access.md) | Stdio transport for local MCP access | Accepted |
+| [012](012-pod-proxy-for-local-pod-connectivity.md) | K8s pod proxy subresource for local pod connectivity | Accepted |
