@@ -18,7 +18,10 @@ if (!namespace) {
 }
 
 const store = new WorkspaceStore(kc, namespace, config.chemuxerDefaultPort);
-const client = new ChemuxerClient({ timeoutMs: config.requestTimeoutMs });
+const client = new ChemuxerClient({
+  timeoutMs: config.requestTimeoutMs,
+  kubeConfig: config.transport === 'stdio' ? kc : undefined,
+});
 const resolver = createEndpointResolver(config.transport, kc, namespace, config.chemuxerDefaultPort);
 
 if (config.transport === 'sse') {
