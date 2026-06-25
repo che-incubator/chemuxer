@@ -23,7 +23,7 @@ export function registerCloseTerminal(
     },
     async ({ workspace, session_id }) => {
       try {
-        const ws = resolveWorkspace(store, resolver, workspace);
+        const ws = await resolveWorkspace(store, resolver, workspace);
         await client.closeSession(ws.resolvedEndpoint, session_id);
         return {
           content: [{

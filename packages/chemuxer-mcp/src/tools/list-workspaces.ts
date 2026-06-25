@@ -12,21 +12,23 @@ export function registerListWorkspaces(server: McpServer, store: WorkspaceStore,
       inputSchema: z.object({}),
     },
     async () => {
-      const workspaces = store.list().map((ws) => ({
-        workspace_id: ws.workspace_id,
-        workspace_name: ws.workspace_name,
-        pod_name: ws.pod_name,
-        phase: ws.phase,
-        ready: ws.ready,
-        idled: ws.idled,
-        endpoint: ws.ready && !ws.idled ? resolver.resolve(ws) : null,
-        ...((!ws.ready || ws.idled) && {
-          reason: [
-            ws.idled && 'Workspace is idled',
-            !ws.ready && `Workspace is not ready (phase: ${ws.phase})`,
-          ].filter(Boolean).join('; '),
-        }),
-      }));
+      const workspaces = await Promise.all(
+        store.list().map(async (ws) => ({
+          workspace_id: ws.workspace_id,
+          workspace_name: ws.workspace_name,
+          pod_name: ws.pod_name,
+          phase: ws.phase,
+          ready: ws.ready,
+          idled: ws.idled,
+          endpoint: ws.ready && !ws.idled ? await resolver.resolve(ws) : null,
+          ...((!ws.ready || ws.idled) && {
+            reason: [
+              ws.idled && 'Workspace is idled',
+              !ws.ready && `Workspace is not ready (phase: ${ws.phase})`,
+            ].filter(Boolean).join('; '),
+          }),
+        })),
+      );
 
       return {
         content: [

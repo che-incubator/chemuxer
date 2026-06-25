@@ -18,10 +18,7 @@ if (!namespace) {
 }
 
 const store = new WorkspaceStore(kc, namespace, config.chemuxerDefaultPort);
-const client = new ChemuxerClient({
-  timeoutMs: config.requestTimeoutMs,
-  kubeConfig: config.transport === 'stdio' ? kc : undefined,
-});
+const client = new ChemuxerClient({ timeoutMs: config.requestTimeoutMs });
 const resolver = createEndpointResolver(config.transport, kc, namespace, config.chemuxerDefaultPort);
 
 if (config.transport === 'sse') {
@@ -59,8 +56,7 @@ if (config.transport === 'sse') {
       process.exit(1);
     }, 10_000).unref();
 
-    server
-      .shutdown()
+    Promise.allSettled([server.shutdown(), store.stop(), resolver.shutdown()])
       .then(() => process.exit(0))
       .catch((err) => {
         console.error('[chemuxer-mcp] Shutdown error:', err);
@@ -92,7 +88,7 @@ if (config.transport === 'sse') {
       process.exit(1);
     }, 10_000).unref();
 
-    Promise.allSettled([mcpServer.close(), store.stop()])
+    Promise.allSettled([mcpServer.close(), store.stop(), resolver.shutdown()])
       .then(() => process.exit(0));
   }
 

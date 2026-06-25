@@ -24,7 +24,7 @@ export function registerSendTerminalInput(
     },
     async ({ workspace, session_id, input }) => {
       try {
-        const ws = resolveWorkspace(store, resolver, workspace);
+        const ws = await resolveWorkspace(store, resolver, workspace);
         await client.sendInput(ws.resolvedEndpoint, session_id, input);
         return {
           content: [{

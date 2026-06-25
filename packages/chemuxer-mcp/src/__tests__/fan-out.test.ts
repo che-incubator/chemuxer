@@ -34,7 +34,8 @@ describe('fanOutFeed', () => {
   it('uses resolved endpoint instead of ws.endpoint', async () => {
     const getFeed = vi.fn().mockResolvedValue(feedResponse([], 'ts-0'));
     const stubResolver = {
-      resolve: vi.fn().mockReturnValue('http://resolved:9999'),
+      resolve: vi.fn().mockResolvedValue('http://resolved:9999'),
+      shutdown: vi.fn().mockResolvedValue(undefined),
     };
 
     await fanOutFeed([makeWs('ws-a', 'http://original:7681')], makeClient(getFeed), stubResolver);

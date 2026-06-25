@@ -1,9 +1,10 @@
 # ADR-012: K8s pod proxy subresource for local pod connectivity
 
 - **Date**: 2026-06-25
-- **Status**: Accepted
+- **Status**: Superseded
 - **Deciders**: @akurinnoy, cross-model LLM council (Claude Opus 4.6, Gemini 3 Pro, GPT-5.3 Codex)
 - **Tags**: kubernetes, networking, architecture
+- **Superseded by**: [ADR-013](013-portforward-for-local-pod-connectivity.md)
 
 ## Context and Problem Statement
 
@@ -35,6 +36,10 @@ The K8s API server natively proxies HTTP requests to pods via the `/proxy/` subr
 - Local: `${apiServerUrl}/api/v1/namespaces/${ns}/pods/${podName}:${port}/proxy/api/sessions`
 
 Authentication is handled by applying kubeconfig credentials (Bearer token) to each request via `KubeConfig.applyToHTTPSOptions()`.
+
+## Supersession Note
+
+**This decision has been superseded.** The pod proxy approach encountered issues with port naming (specifically, endpoints published as `7681-https` in Kubernetes service discovery caused routing failures). The PortForward API was implemented instead, providing better compatibility with modern Kubernetes deployments while eliminating the need for kubeconfig authentication in local mode.
 
 ### Why not port-forward?
 

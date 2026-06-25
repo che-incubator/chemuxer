@@ -22,7 +22,7 @@ export function registerCreateTerminal(
     },
     async ({ workspace }) => {
       try {
-        const ws = resolveWorkspace(store, resolver, workspace);
+        const ws = await resolveWorkspace(store, resolver, workspace);
         const session = await client.createSession(ws.resolvedEndpoint);
         return {
           content: [{
