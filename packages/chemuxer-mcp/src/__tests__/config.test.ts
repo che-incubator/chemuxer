@@ -11,6 +11,7 @@ describe('loadConfig', () => {
     delete process.env.NAMESPACE;
     delete process.env.CHEMUXER_DEFAULT_PORT;
     delete process.env.REQUEST_TIMEOUT_MS;
+    delete process.env.CHEMUXER_MCP_TRANSPORT;
   });
 
   afterEach(() => {
@@ -27,6 +28,7 @@ describe('loadConfig', () => {
   it('returns defaults when no env vars are set', () => {
     const config = loadConfig();
     expect(config).toEqual({
+      transport: 'stdio',
       port: 3001,
       host: '0.0.0.0',
       namespace: undefined,
@@ -44,6 +46,7 @@ describe('loadConfig', () => {
 
     const config = loadConfig();
     expect(config).toEqual({
+      transport: 'stdio',
       port: 8080,
       host: '127.0.0.1',
       namespace: 'test-ns',
@@ -60,5 +63,48 @@ describe('loadConfig', () => {
   it('returns a frozen object', () => {
     const config = loadConfig();
     expect(Object.isFrozen(config)).toBe(true);
+  });
+
+  describe('transport config', () => {
+    it('defaults transport to stdio when no env or args', () => {
+      const config = loadConfig();
+      expect(config.transport).toBe('stdio');
+    });
+
+    it('reads transport from CHEMUXER_MCP_TRANSPORT env var', () => {
+      process.env.CHEMUXER_MCP_TRANSPORT = 'sse';
+      const config = loadConfig();
+      expect(config.transport).toBe('sse');
+    });
+
+    it('throws on invalid transport value', () => {
+      process.env.CHEMUXER_MCP_TRANSPORT = 'websocket';
+      expect(() => loadConfig()).toThrow();
+    });
+  });
+
+  describe('CLI arg parsing', () => {
+    it('--transport overrides env var', () => {
+      process.env.CHEMUXER_MCP_TRANSPORT = 'stdio';
+      const config = loadConfig(['--transport', 'sse']);
+      expect(config.transport).toBe('sse');
+    });
+
+    it('--port overrides PORT env var', () => {
+      process.env.PORT = '3001';
+      const config = loadConfig(['--port', '9999']);
+      expect(config.port).toBe(9999);
+    });
+
+    it('--namespace overrides NAMESPACE env var', () => {
+      process.env.NAMESPACE = 'env-ns';
+      const config = loadConfig(['--namespace', 'cli-ns']);
+      expect(config.namespace).toBe('cli-ns');
+    });
+
+    it('ignores unknown flags', () => {
+      const config = loadConfig(['--unknown', 'val']);
+      expect(config.transport).toBe('stdio');
+    });
   });
 });
