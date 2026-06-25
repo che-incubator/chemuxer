@@ -10,6 +10,7 @@ permissions:
 
 env:
   IMAGE: quay.io/che-incubator/chemuxer
+  MCP_IMAGE: quay.io/che-incubator/chemuxer-mcp
 
 jobs:
   test:
@@ -33,11 +34,12 @@ jobs:
       - run: npm test -w packages/shared -w packages/chemuxer
 
   build-mcp-image:
-    name: Build chemuxer-mcp image
+    name: Build and push PR MCP image
     needs: test
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      pull-requests: write
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
         with:
@@ -49,14 +51,71 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4
 
-      - name: Build (no push for PRs)
+      - name: Log in to Quay.io
+        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4
+        with:
+          registry: quay.io
+          username: ${{ secrets.QUAY_USERNAME }}
+          password: ${{ secrets.QUAY_PASSWORD }}
+
+      - name: Build and push
         uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7
         with:
           context: .
           file: packages/chemuxer-mcp/Dockerfile
           platforms: linux/amd64,linux/arm64
-          push: false
-          tags: chemuxer-mcp:test
+          push: true
+          tags: ${{ env.MCP_IMAGE }}:pr-${{ github.event.pull_request.number }}
+
+      - name: Post MCP image comment
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        with:
+          script: |
+            const tag = `${{ env.MCP_IMAGE }}:pr-${{ github.event.pull_request.number }}`;
+            const marker = '<!-- chemuxer-mcp-image-comment -->';
+            const body = [
+              marker,
+              '### MCP image built',
+              '',
+              '```',
+              tag,
+              '```',
+              '',
+              '```bash',
+              `# On-cluster (SSE)`,
+              `kubectl set image deployment/chemuxer-mcp chemuxer-mcp=${tag} -n <namespace>`,
+              '',
+              `# Local (stdio)`,
+              `claude mcp add chemuxer-mcp -- node packages/chemuxer-mcp/dist/index.js --namespace <namespace>`,
+              '```',
+            ].join('\n');
+
+            const comments = await github.paginate(
+              github.rest.issues.listComments,
+              {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                per_page: 100,
+              },
+            );
+            const existing = comments.find(c => c.body.includes(marker));
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
 
   build-image:
     name: Build and push PR image
