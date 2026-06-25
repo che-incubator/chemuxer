@@ -19,7 +19,7 @@ export function registerListWorkspaces(server: McpServer, store: WorkspaceStore,
         phase: ws.phase,
         ready: ws.ready,
         idled: ws.idled,
-        endpoint: resolver.resolve(ws),
+        endpoint: ws.ready && !ws.idled ? resolver.resolve(ws) : null,
         ...((!ws.ready || ws.idled) && {
           reason: [
             ws.idled && 'Workspace is idled',

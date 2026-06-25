@@ -81,17 +81,21 @@ if (config.transport === 'sse') {
   const transport = new StdioServerTransport();
   await mcpServer.connect(transport);
 
-  process.on('SIGTERM', async () => {
-    console.error('[chemuxer-mcp] Received SIGTERM, shutting down...');
-    await mcpServer.close();
-    await store.stop();
-    process.exit(0);
-  });
+  let stdioExiting = false;
+  function onStdioSignal(signal: string): void {
+    if (stdioExiting) return;
+    stdioExiting = true;
+    console.error(`[chemuxer-mcp] Received ${signal}, shutting down...`);
 
-  process.on('SIGINT', async () => {
-    console.error('[chemuxer-mcp] Received SIGINT, shutting down...');
-    await mcpServer.close();
-    await store.stop();
-    process.exit(0);
-  });
+    setTimeout(() => {
+      console.error('[chemuxer-mcp] Shutdown timeout exceeded, forcing exit');
+      process.exit(1);
+    }, 10_000).unref();
+
+    Promise.allSettled([mcpServer.close(), store.stop()])
+      .then(() => process.exit(0));
+  }
+
+  process.on('SIGTERM', () => onStdioSignal('SIGTERM'));
+  process.on('SIGINT', () => onStdioSignal('SIGINT'));
 }

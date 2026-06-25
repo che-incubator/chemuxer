@@ -78,7 +78,6 @@ describe('PodProxyEndpointResolver', () => {
 describe('createEndpointResolver', () => {
   it('returns DirectEndpointResolver for sse transport', () => {
     const kc = new k8s.KubeConfig();
-    kc.loadFromDefault();
     const resolver = createEndpointResolver('sse', kc, 'ns', 7681);
     expect(resolver).toBeInstanceOf(DirectEndpointResolver);
   });

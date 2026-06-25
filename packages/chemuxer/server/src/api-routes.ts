@@ -36,8 +36,9 @@ across ALL workspaces in your namespace through a single connection.
 Available MCP tools: list_workspaces, list_terminals, get_terminal_output,
 send_terminal_input, create_terminal, close_terminal, get_activity_feed.
 
-All tools accept a "workspace" parameter to target a specific workspace.
-get_activity_feed can omit "workspace" for a cross-workspace activity view.
+All tools except list_workspaces accept a "workspace" parameter to target a
+specific workspace. get_activity_feed can omit "workspace" for a cross-workspace
+activity view. list_workspaces takes no parameters.
 
 See: https://github.com/che-incubator/chemuxer/tree/main/packages/chemuxer-mcp
 

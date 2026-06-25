@@ -2,7 +2,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: chemuxer-mcp
-  namespace: akurinnoy-che
   labels:
     app: chemuxer-mcp
 spec:
@@ -28,6 +27,9 @@ spec:
               value: "production"
             - name: CHEMUXER_MCP_TRANSPORT
               value: "sse"
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
           livenessProbe:
             httpGet:
               path: /healthz
@@ -36,7 +38,7 @@ spec:
             periodSeconds: 10
           readinessProbe:
             httpGet:
-              path: /healthz
+              path: /readyz
               port: 3001
             initialDelaySeconds: 3
             periodSeconds: 5
