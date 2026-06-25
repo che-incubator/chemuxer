@@ -31,6 +31,17 @@ function feedResponse(entries: Array<{ timestamp: string; sessionId: string; con
 }
 
 describe('fanOutFeed', () => {
+  it('uses resolved endpoint instead of ws.endpoint', async () => {
+    const getFeed = vi.fn().mockResolvedValue(feedResponse([], 'ts-0'));
+    const stubResolver = {
+      resolve: vi.fn().mockReturnValue('http://resolved:9999'),
+    };
+
+    await fanOutFeed([makeWs('ws-a', 'http://original:7681')], makeClient(getFeed), stubResolver);
+
+    expect(getFeed).toHaveBeenCalledWith('http://resolved:9999', undefined, undefined);
+  });
+
   it('merges entries from 2 workspaces chronologically', async () => {
     const getFeed = vi.fn<ChemuxerClient['getFeed']>()
       .mockImplementation(async (endpoint) => {

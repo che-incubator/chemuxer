@@ -83,6 +83,23 @@ describe('get_terminal_output tool', () => {
     expect(client.getBuffer).toHaveBeenCalledWith('http://10.0.0.1:7681', 'sess-1');
   });
 
+  it('uses resolved endpoint from resolver, not ws.endpoint directly', async () => {
+    const stubResolver = { resolve: () => 'http://resolved:9999' } as unknown as import('../../endpoint-resolver.js').EndpointResolver;
+    const client = makeClient({ getBuffer: vi.fn().mockResolvedValue('buf') });
+    const store = makeStore([readyWorkspace]);
+
+    const server = new McpServer({ name: 'test', version: '0.0.1' });
+    registerGetTerminalOutput(server, store, client, stubResolver);
+    const [ct, st] = InMemoryTransport.createLinkedPair();
+    const mc = new Client({ name: 'tc', version: '0.0.1' });
+    await Promise.all([mc.connect(ct), server.connect(st)]);
+    await mc.callTool({ name: 'get_terminal_output', arguments: { workspace: 'ready-ws', session_id: 's1' } });
+    await mc.close();
+    await server.close();
+
+    expect(client.getBuffer).toHaveBeenCalledWith('http://resolved:9999', 's1');
+  });
+
   it('truncates from head, keeping the most recent (tail) content', async () => {
     const bufferContent = 'A'.repeat(150) + 'B'.repeat(50);
     const client = makeClient({

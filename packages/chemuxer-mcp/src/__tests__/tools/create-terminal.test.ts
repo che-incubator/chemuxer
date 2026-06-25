@@ -99,6 +99,25 @@ describe('create_terminal tool', () => {
     expect(client.createSession).toHaveBeenCalledWith('http://10.0.0.1:7681');
   });
 
+  it('uses resolved endpoint from resolver, not ws.endpoint directly', async () => {
+    const stubResolver = { resolve: () => 'http://resolved:9999' } as unknown as import('../../endpoint-resolver.js').EndpointResolver;
+    const client = makeClient({ createSession: vi.fn().mockResolvedValue({
+      id: 'sess', shell: '/bin/bash', title: 'bash', renamed: false, createdAt: 1000,
+    }) });
+    const store = makeStore([readyWorkspace]);
+
+    const server = new McpServer({ name: 'test', version: '0.0.1' });
+    registerCreateTerminal(server, store, client, stubResolver);
+    const [ct, st] = InMemoryTransport.createLinkedPair();
+    const mc = new Client({ name: 'tc', version: '0.0.1' });
+    await Promise.all([mc.connect(ct), server.connect(st)]);
+    await mc.callTool({ name: 'create_terminal', arguments: { workspace: 'ready-ws' } });
+    await mc.close();
+    await server.close();
+
+    expect(client.createSession).toHaveBeenCalledWith('http://resolved:9999');
+  });
+
   it('returns WORKSPACE_NOT_READY for non-ready workspace', async () => {
     const client = makeClient();
     const store = makeStore([notReadyWorkspace]);
