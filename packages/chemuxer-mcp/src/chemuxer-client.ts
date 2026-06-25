@@ -52,9 +52,9 @@ export class ChemuxerClient {
     // Direct pod IP URLs (http://) don't need auth
     if (!url.startsWith('https://')) return init;
 
-    const opts: k8s.RequestOptions = { headers: {} };
-    await this.kubeConfig.applyToHTTPSOptions(opts);
-    const authHeaders = opts.headers as Record<string, string>;
+    const opts: { headers: Record<string, string> } = { headers: {} };
+    await this.kubeConfig.applyToHTTPSOptions(opts as Parameters<k8s.KubeConfig['applyToHTTPSOptions']>[0]);
+    const authHeaders = opts.headers;
     return {
       ...init,
       headers: { ...(init.headers as Record<string, string> | undefined), ...authHeaders },

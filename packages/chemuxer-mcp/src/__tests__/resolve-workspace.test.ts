@@ -7,7 +7,7 @@ import type { WorkspaceInfo } from '../workspace-store.js';
 const resolver = new DirectEndpointResolver();
 
 function makeStore(entries: Map<string, WorkspaceInfo>) {
-  return { get: (name: string) => entries.get(name) } as { get(name: string): WorkspaceInfo | undefined };
+  return { get: (name: string) => entries.get(name) } as unknown as import('../workspace-store.js').WorkspaceStore;
 }
 
 const readyWorkspace: WorkspaceInfo = {

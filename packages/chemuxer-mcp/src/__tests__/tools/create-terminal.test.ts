@@ -72,7 +72,7 @@ const notReadyWorkspace: WorkspaceInfo = {
   phase: 'Starting',
   ready: false,
   idled: false,
-  endpoint: undefined,
+  endpoint: null,
 };
 
 describe('create_terminal tool', () => {
