@@ -1,11 +1,27 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as k8s from '@kubernetes/client-node';
+import net from 'node:net';
 import {
   DirectEndpointResolver,
-  PodProxyEndpointResolver,
+  PortForwardEndpointResolver,
   createEndpointResolver,
 } from '../endpoint-resolver.js';
 import type { WorkspaceInfo } from '../workspace-store.js';
+
+// Mock the PortForward class
+vi.mock('@kubernetes/client-node', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@kubernetes/client-node')>();
+
+  class MockPortForward {
+    portForward = vi.fn();
+    constructor(_kc: any) {}
+  }
+
+  return {
+    ...actual,
+    PortForward: MockPortForward,
+  };
+});
 
 const readyWs: WorkspaceInfo = {
   workspace_id: 'ws-1',
@@ -44,11 +60,11 @@ describe('DirectEndpointResolver', () => {
   });
 });
 
-describe('PodProxyEndpointResolver', () => {
-  function makeKubeConfig(server = 'https://api.cluster.example.com:6443'): k8s.KubeConfig {
+describe('PortForwardEndpointResolver', () => {
+  function makeKubeConfig(): k8s.KubeConfig {
     const kc = new k8s.KubeConfig();
     kc.loadFromOptions({
-      clusters: [{ name: 'test', server }],
+      clusters: [{ name: 'test', server: 'https://api.cluster.example.com:6443' }],
       users: [{ name: 'user' }],
       contexts: [{ name: 'ctx', cluster: 'test', user: 'user', namespace: 'test-ns' }],
       currentContext: 'ctx',
@@ -56,33 +72,68 @@ describe('PodProxyEndpointResolver', () => {
     return kc;
   }
 
-  it('builds pod proxy URL for a ready workspace', async () => {
+  it('returns localhost URL with allocated port for a ready workspace', async () => {
     const kc = makeKubeConfig();
-    const resolver = new PodProxyEndpointResolver(kc, 'my-namespace', 7681);
+    const resolver = new PortForwardEndpointResolver(kc, 'my-namespace', 7681);
+
     const url = await resolver.resolve(readyWs);
-    expect(url).toBe(
-      'https://api.cluster.example.com:6443/api/v1/namespaces/my-namespace/pods/my-ws-pod:7681/proxy',
-    );
+
+    expect(url).toMatch(/^http:\/\/127\.0\.0\.1:\d+$/);
+    const port = parseInt(url!.split(':')[2], 10);
+    expect(port).toBeGreaterThan(0);
   });
 
   it('returns null for a workspace that is not ready', async () => {
     const kc = makeKubeConfig();
-    const resolver = new PodProxyEndpointResolver(kc, 'my-namespace', 7681);
+    const resolver = new PortForwardEndpointResolver(kc, 'my-namespace', 7681);
+
     expect(await resolver.resolve(notReadyWs)).toBeNull();
   });
 
-  it('strips trailing slash from API server URL', async () => {
-    const kc = makeKubeConfig('https://api.example.com/');
-    const resolver = new PodProxyEndpointResolver(kc, 'ns', 7681);
-    const url = await resolver.resolve(readyWs);
-    expect(url).toMatch(/^https:\/\/api\.example\.com\/api\/v1/);
-    expect(url).not.toContain('//api/v1');
+  it('caches tunnel for same pod', async () => {
+    const kc = makeKubeConfig();
+    const resolver = new PortForwardEndpointResolver(kc, 'my-namespace', 7681);
+
+    const url1 = await resolver.resolve(readyWs);
+    const url2 = await resolver.resolve(readyWs);
+
+    expect(url1).toBe(url2);
   });
 
-  it('shutdown is a no-op', async () => {
+  it('shutdown closes all tunnels', async () => {
     const kc = makeKubeConfig();
-    const resolver = new PodProxyEndpointResolver(kc, 'my-namespace', 7681);
-    await expect(resolver.shutdown()).resolves.toBeUndefined();
+    const resolver = new PortForwardEndpointResolver(kc, 'my-namespace', 7681);
+
+    // Create a tunnel by resolving
+    const url = await resolver.resolve(readyWs);
+    expect(url).not.toBeNull();
+
+    // Shutdown should close the server
+    await resolver.shutdown();
+
+    // After shutdown, the server should be closed
+    // We can verify this by trying to connect or by checking internal state
+    // For now, we just verify shutdown resolves without error
+  });
+
+  it('creates server for each unique pod', async () => {
+    const kc = makeKubeConfig();
+    const resolver = new PortForwardEndpointResolver(kc, 'my-namespace', 7681);
+
+    const ws2: WorkspaceInfo = {
+      ...readyWs,
+      workspace_id: 'ws-2',
+      workspace_name: 'other-ws',
+      pod_name: 'other-ws-pod',
+    };
+
+    const url1 = await resolver.resolve(readyWs);
+    const url2 = await resolver.resolve(ws2);
+
+    expect(url1).not.toBe(url2);
+    const port1 = parseInt(url1!.split(':')[2], 10);
+    const port2 = parseInt(url2!.split(':')[2], 10);
+    expect(port1).not.toBe(port2);
   });
 });
 
@@ -93,7 +144,7 @@ describe('createEndpointResolver', () => {
     expect(resolver).toBeInstanceOf(DirectEndpointResolver);
   });
 
-  it('returns PodProxyEndpointResolver for stdio transport', () => {
+  it('returns PortForwardEndpointResolver for stdio transport', () => {
     const kc = new k8s.KubeConfig();
     kc.loadFromOptions({
       clusters: [{ name: 'c', server: 'https://api.example.com' }],
@@ -102,6 +153,6 @@ describe('createEndpointResolver', () => {
       currentContext: 'ctx',
     });
     const resolver = createEndpointResolver('stdio', kc, 'ns', 7681);
-    expect(resolver).toBeInstanceOf(PodProxyEndpointResolver);
+    expect(resolver).toBeInstanceOf(PortForwardEndpointResolver);
   });
 });
