@@ -107,13 +107,28 @@ describe('PortForwardEndpointResolver', () => {
     // Create a tunnel by resolving
     const url = await resolver.resolve(readyWs);
     expect(url).not.toBeNull();
+    const port = parseInt(url!.split(':')[2], 10);
 
     // Shutdown should close the server
     await resolver.shutdown();
 
-    // After shutdown, the server should be closed
-    // We can verify this by trying to connect or by checking internal state
-    // For now, we just verify shutdown resolves without error
+    // After shutdown, attempting to connect should fail with ECONNREFUSED
+    await expect(
+      new Promise<void>((resolve, reject) => {
+        const socket = net.connect(port, '127.0.0.1');
+        socket.on('connect', () => {
+          socket.destroy();
+          reject(new Error('Should not connect to closed server'));
+        });
+        socket.on('error', (err: NodeJS.ErrnoException) => {
+          if (err.code === 'ECONNREFUSED') {
+            resolve();
+          } else {
+            reject(err);
+          }
+        });
+      }),
+    ).resolves.toBeUndefined();
   });
 
   it('creates server for each unique pod', async () => {
@@ -134,6 +149,70 @@ describe('PortForwardEndpointResolver', () => {
     const port1 = parseInt(url1!.split(':')[2], 10);
     const port2 = parseInt(url2!.split(':')[2], 10);
     expect(port1).not.toBe(port2);
+  });
+
+  it('handles portForward errors gracefully without crashing', async () => {
+    const kc = makeKubeConfig();
+    const resolver = new PortForwardEndpointResolver(kc, 'my-namespace', 7681);
+
+    const url = await resolver.resolve(readyWs);
+    expect(url).not.toBeNull();
+    const port = parseInt(url!.split(':')[2], 10);
+
+    // Access the portForward instance and make the next call reject
+    const portForwardInstance = (resolver as any).portForward;
+    const mockError = new Error('Pod not found');
+    portForwardInstance.portForward.mockImplementationOnce(() => Promise.reject(mockError));
+
+    // Connect to trigger portForward call with error
+    const socket = net.connect(port, '127.0.0.1');
+
+    // Wait for connection and error handling
+    await new Promise((resolve) => {
+      socket.once('close', resolve);
+      setTimeout(resolve, 200);
+    });
+
+    // Socket should be destroyed by error handler
+    expect(socket.destroyed).toBe(true);
+  });
+
+  it('deduplicates concurrent resolve calls for same pod', async () => {
+    const kc = makeKubeConfig();
+    const resolver = new PortForwardEndpointResolver(kc, 'my-namespace', 7681);
+
+    // Trigger two concurrent resolve calls
+    const [url1, url2] = await Promise.all([
+      resolver.resolve(readyWs),
+      resolver.resolve(readyWs),
+    ]);
+
+    // Both should return the same URL (same tunnel)
+    expect(url1).toBe(url2);
+  });
+
+  it('handles runtime server errors after startup', async () => {
+    const kc = makeKubeConfig();
+    const resolver = new PortForwardEndpointResolver(kc, 'my-namespace', 7681);
+
+    const url = await resolver.resolve(readyWs);
+    expect(url).not.toBeNull();
+    const port = parseInt(url!.split(':')[2], 10);
+
+    // Get the internal server reference
+    const tunnels = (resolver as any).tunnels;
+    const tunnel = tunnels.get(readyWs.pod_name);
+    expect(tunnel).toBeDefined();
+
+    // Emit a runtime error on the server
+    const errorSpy = vi.fn();
+    tunnel.server.on('error', errorSpy);
+
+    // This should not crash the process
+    tunnel.server.emit('error', new Error('Runtime server error'));
+
+    // Error handler should have been called
+    expect(errorSpy).toHaveBeenCalledWith(expect.any(Error));
   });
 });
 

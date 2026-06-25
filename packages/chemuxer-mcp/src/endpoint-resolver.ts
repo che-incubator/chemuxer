@@ -25,6 +25,7 @@ export class PortForwardEndpointResolver implements EndpointResolver {
   private readonly namespace: string;
   private readonly defaultPort: number;
   private readonly tunnels = new Map<string, Tunnel>();
+  private readonly pendingTunnels = new Map<string, Promise<Tunnel>>();
   private readonly portForward: k8s.PortForward;
 
   constructor(kc: k8s.KubeConfig, namespace: string, defaultPort: number) {
@@ -42,20 +43,32 @@ export class PortForwardEndpointResolver implements EndpointResolver {
       return `http://127.0.0.1:${existing.localPort}`;
     }
 
-    const tunnel = await this.createTunnel(ws.pod_name);
-    return `http://127.0.0.1:${tunnel.localPort}`;
+    // Deduplicate concurrent resolve calls for the same pod
+    const pending = this.pendingTunnels.get(ws.pod_name);
+    if (pending) {
+      const tunnel = await pending;
+      return `http://127.0.0.1:${tunnel.localPort}`;
+    }
+
+    const tunnelPromise = this.createTunnel(ws.pod_name);
+    this.pendingTunnels.set(ws.pod_name, tunnelPromise);
+
+    try {
+      const tunnel = await tunnelPromise;
+      return `http://127.0.0.1:${tunnel.localPort}`;
+    } finally {
+      this.pendingTunnels.delete(ws.pod_name);
+    }
   }
 
   private async createTunnel(podName: string): Promise<Tunnel> {
     const server = net.createServer((socket) => {
-      this.portForward.portForward(
-        this.namespace,
-        podName,
-        [this.defaultPort],
-        socket,
-        null,
-        socket,
-      );
+      this.portForward
+        .portForward(this.namespace, podName, [this.defaultPort], socket, null, socket)
+        .catch((err) => {
+          console.error(`Port forward error for pod ${podName}:`, err);
+          socket.destroy();
+        });
     });
 
     const localPort = await new Promise<number>((resolve, reject) => {
@@ -63,6 +76,11 @@ export class PortForwardEndpointResolver implements EndpointResolver {
       server.listen(0, '127.0.0.1', () => {
         resolve((server.address() as net.AddressInfo).port);
       });
+    });
+
+    // Add persistent error handler for runtime errors
+    server.on('error', (err) => {
+      console.error(`Server error for pod ${podName} on port ${localPort}:`, err);
     });
 
     const tunnel: Tunnel = { server, localPort };
