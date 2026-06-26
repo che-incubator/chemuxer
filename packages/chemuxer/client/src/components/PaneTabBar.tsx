@@ -16,6 +16,7 @@ interface PaneTabBarProps {
   onDragStart: (data: DragData) => void;
   onDragEnd: () => void;
   onRename?: (sessionId: string) => void;
+  onPin?: (sessionId: string, pinned: boolean) => void;
   onSplit?: (sessionId: string, zone: DropZone) => void;
   renamingSessionId?: string | null;
   onRenameConfirm?: (sessionId: string, title: string) => void;
@@ -80,6 +81,7 @@ export function PaneTabBar({
   onDragStart,
   onDragEnd,
   onRename,
+  onPin,
   onSplit,
   renamingSessionId,
   onRenameConfirm,
@@ -130,6 +132,7 @@ export function PaneTabBar({
                 />
               ) : (
                 <>
+                  {session.pinned && <span className="tab-pin-icon" title="Pinned">📌</span>}
                   <span className="tab-title">{session.renamed ? session.title : `${session.title} — ${entry.tabNumber}`}</span>
                   {!zoomed && (
                     <span
@@ -204,9 +207,19 @@ export function PaneTabBar({
           paneId={paneId}
           isSettings={contextMenu.isSettings}
           zoomed={zoomed}
+          pinned={contextMenu.sessionId ? sessions.find((s) => s.id === contextMenu.sessionId)?.pinned : false}
           onRename={() => {
             if (contextMenu.sessionId) {
               onRename?.(contextMenu.sessionId);
+            }
+            setContextMenu(null);
+          }}
+          onPin={() => {
+            if (contextMenu.sessionId) {
+              const session = sessions.find((s) => s.id === contextMenu.sessionId);
+              if (session) {
+                onPin?.(contextMenu.sessionId, !session.pinned);
+              }
             }
             setContextMenu(null);
           }}

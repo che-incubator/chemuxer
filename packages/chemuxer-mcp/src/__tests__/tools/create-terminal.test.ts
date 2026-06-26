@@ -82,6 +82,7 @@ describe('create_terminal tool', () => {
       shell: '/bin/bash',
       title: 'bash',
       renamed: false,
+      pinned: false,
       createdAt: 3000,
     };
     const client = makeClient({ createSession: vi.fn().mockResolvedValue(createdSession) });

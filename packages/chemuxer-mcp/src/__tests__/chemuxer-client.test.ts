@@ -6,8 +6,8 @@ import type { SessionInfo, FeedResponse } from '@chemuxer/shared';
 // --- Canned data ---
 
 const SESSIONS: SessionInfo[] = [
-  { id: 'sess-1', shell: '/bin/bash', title: 'build', renamed: false, createdAt: 1000 },
-  { id: 'sess-2', shell: '/bin/zsh', title: 'test', renamed: true, createdAt: 2000 },
+  { id: 'sess-1', shell: '/bin/bash', title: 'build', renamed: false, pinned: false, createdAt: 1000 },
+  { id: 'sess-2', shell: '/bin/zsh', title: 'test', renamed: true, pinned: false, createdAt: 2000 },
 ];
 
 const CREATED_SESSION: SessionInfo = {
@@ -15,6 +15,7 @@ const CREATED_SESSION: SessionInfo = {
   shell: '/bin/bash',
   title: 'new',
   renamed: false,
+  pinned: false,
   createdAt: 3000,
 };
 

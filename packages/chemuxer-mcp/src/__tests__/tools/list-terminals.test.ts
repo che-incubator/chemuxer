@@ -73,8 +73,8 @@ const idledWorkspace: WorkspaceInfo = {
 describe('list_terminals tool', () => {
   it('returns sessions from a ready workspace', async () => {
     const sessions: SessionInfo[] = [
-      { id: 'sess-1', shell: '/bin/bash', title: 'bash', renamed: false, createdAt: 1000 },
-      { id: 'sess-2', shell: '/bin/zsh', title: 'zsh', renamed: true, createdAt: 2000 },
+      { id: 'sess-1', shell: '/bin/bash', title: 'bash', renamed: false, pinned: false, createdAt: 1000 },
+      { id: 'sess-2', shell: '/bin/zsh', title: 'zsh', renamed: true, pinned: false, createdAt: 2000 },
     ];
     const client = makeClient({ listSessions: vi.fn().mockResolvedValue(sessions) });
     const store = makeStore([readyWorkspace]);

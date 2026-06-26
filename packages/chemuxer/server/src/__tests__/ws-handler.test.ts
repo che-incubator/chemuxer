@@ -291,4 +291,69 @@ describe('WebSocket Handler', { timeout: 30000 }, () => {
 
     expect(code).toBe(4404);
   });
+
+  // --- Pin support ---
+  it('control: pin message sets session pinned state', async () => {
+    const session = manager.createSession();
+    const { ws } = await connectControl(server);
+
+    ws.send(JSON.stringify({ type: 'pin', sessionId: session.id, pinned: true }));
+    const pinned = await waitForMessage(ws);
+    expect(pinned.type).toBe('session-pinned');
+    expect((pinned as any).sessionId).toBe(session.id);
+    expect((pinned as any).pinned).toBe(true);
+
+    // Verify the session is actually pinned
+    expect(session.toInfo().pinned).toBe(true);
+    ws.close();
+  });
+
+  it('control: pin message broadcasts to other control clients', async () => {
+    const session = manager.createSession();
+    const addr = server.address() as { port: number };
+
+    const ws1 = new WebSocket(`ws://localhost:${addr.port}/ws/control`);
+    const ws1InitPromise = waitForMessage(ws1);
+    await new Promise<void>((resolve, reject) => {
+      ws1.on('open', () => resolve());
+      ws1.on('error', reject);
+    });
+    await ws1InitPromise;
+
+    const ws2 = new WebSocket(`ws://localhost:${addr.port}/ws/control`);
+    const ws2InitPromise = waitForMessage(ws2);
+    await new Promise<void>((resolve, reject) => {
+      ws2.on('open', () => resolve());
+      ws2.on('error', reject);
+    });
+    await ws2InitPromise;
+
+    const ws2MsgPromise = waitForMessage(ws2);
+    ws1.send(JSON.stringify({ type: 'pin', sessionId: session.id, pinned: true }));
+
+    const [ws1Msg, ws2Msg] = await Promise.all([waitForMessage(ws1), ws2MsgPromise]);
+    expect(ws1Msg.type).toBe('session-pinned');
+    expect(ws2Msg.type).toBe('session-pinned');
+    expect((ws2Msg as any).pinned).toBe(true);
+
+    ws1.close();
+    ws2.close();
+  });
+
+  it('control: close returns error for pinned session', async () => {
+    const session = manager.createSession();
+    manager.pinSession(session.id, true);
+
+    const { ws } = await connectControl(server);
+
+    ws.send(JSON.stringify({ type: 'close', sessionId: session.id }));
+    const error = await waitForMessage(ws);
+    expect(error.type).toBe('error');
+    expect((error as any).code).toBe('SESSION_PINNED');
+    expect((error as any).sessionId).toBe(session.id);
+
+    // Verify session still exists
+    expect(manager.getSession(session.id)).toBeTruthy();
+    ws.close();
+  });
 });

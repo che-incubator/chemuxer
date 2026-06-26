@@ -7,8 +7,10 @@ interface TabContextMenuProps {
   paneId: string;
   isSettings: boolean;
   zoomed?: boolean;
+  pinned?: boolean;
   onRename: () => void;
   onClose: () => void;
+  onPin?: () => void;
   onSplitRight: () => void;
   onSplitLeft: () => void;
   onSplitDown: () => void;
@@ -26,8 +28,10 @@ export function TabContextMenu({
   y,
   isSettings,
   zoomed,
+  pinned,
   onRename,
   onClose,
+  onPin,
   onSplitRight,
   onSplitLeft,
   onSplitDown,
@@ -61,6 +65,7 @@ export function TabContextMenu({
       ? [{ label: 'Rename', action: onRename }]
       : [
           { label: 'Rename', action: onRename },
+          { label: pinned ? 'Unpin Session' : 'Pin Session', action: () => onPin?.() },
           { label: 'Close', action: onClose },
           { label: 'Split Right', action: onSplitRight },
           { label: 'Split Left', action: onSplitLeft },
