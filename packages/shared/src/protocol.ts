@@ -5,6 +5,7 @@ export interface SessionInfo {
   shell: string;
   title: string;
   renamed: boolean;
+  pinned: boolean;
   createdAt: number;
 }
 
@@ -12,7 +13,8 @@ export interface SessionInfo {
 export type ClientControlMessage =
   | { type: 'create' }
   | { type: 'close'; sessionId: string }
-  | { type: 'rename'; sessionId: string; title: string };
+  | { type: 'rename'; sessionId: string; title: string }
+  | { type: 'pin'; sessionId: string; pinned: boolean };
 
 // Server → Client on control channel
 export type ServerControlMessage =
@@ -20,6 +22,7 @@ export type ServerControlMessage =
   | { type: 'session-created'; session: SessionInfo }
   | { type: 'session-closed'; sessionId: string; exitCode: number | null }
   | { type: 'session-renamed'; sessionId: string; title: string; renamed: boolean }
+  | { type: 'session-pinned'; sessionId: string; pinned: boolean }
   | { type: 'settings-changed'; settings: Settings }
   | { type: 'error'; error: string };
 
@@ -34,6 +37,7 @@ export function isClientControlMessage(msg: unknown): msg is ClientControlMessag
   if (m.type === 'create') return true;
   if (m.type === 'close') return typeof m.sessionId === 'string';
   if (m.type === 'rename') return typeof m.sessionId === 'string' && typeof m.title === 'string';
+  if (m.type === 'pin') return typeof m.sessionId === 'string' && typeof m.pinned === 'boolean';
   return false;
 }
 
