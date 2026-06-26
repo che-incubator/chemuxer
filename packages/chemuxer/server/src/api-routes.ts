@@ -144,7 +144,7 @@ export function createApiRouter(
     res.json(manager.listSessions());
   });
 
-  router.post('/api/sessions', (_req, res, next) => {
+  router.post('/api/sessions', (req, res, next) => {
     let session;
     try {
       session = manager.createSession();
@@ -156,6 +156,9 @@ export function createApiRouter(
       next(err);
       return;
     }
+    if (req.body?.pinned === true) {
+      manager.pinSession(session.id, true);
+    }
     res.status(201).json(session.toInfo());
   });
 
@@ -164,22 +167,50 @@ export function createApiRouter(
   });
 
   router.delete('/api/sessions/:id', (req, res) => {
-    manager.closeSession(req.params.id);
+    const force = req.query.force === 'true';
+    const result = manager.closeSession(req.params.id, force);
+
+    if (result === 'pinned') {
+      res.status(409).json({
+        error: 'Session is pinned',
+        code: 'SESSION_PINNED',
+        sessionId: req.params.id,
+      });
+      return;
+    }
+
     broadcastControl({ type: 'session-closed', sessionId: req.params.id, exitCode: null });
     res.json({ ok: true });
   });
 
   router.patch('/api/sessions/:id', (req, res) => {
-    const { title } = req.body;
-    if (typeof title !== 'string') {
-      res.status(400).json({ error: 'title must be a string', status: 400 });
+    const { title, pinned } = req.body;
+
+    if (title !== undefined) {
+      if (typeof title !== 'string') {
+        res.status(400).json({ error: 'title must be a string', status: 400 });
+        return;
+      }
+      const session = req.session!;
+      session.rename(title);
+      const info = session.toInfo();
+      broadcastControl({ type: 'session-renamed', sessionId: info.id, title: info.title, renamed: info.renamed });
+      res.json(info);
       return;
     }
-    const session = req.session!;
-    session.rename(title);
-    const info = session.toInfo();
-    broadcastControl({ type: 'session-renamed', sessionId: info.id, title: info.title, renamed: info.renamed });
-    res.json(info);
+
+    if (pinned !== undefined) {
+      if (typeof pinned !== 'boolean') {
+        res.status(400).json({ error: 'pinned must be a boolean', status: 400 });
+        return;
+      }
+      manager.pinSession(req.params.id, pinned);
+      broadcastControl({ type: 'session-pinned', sessionId: req.params.id, pinned });
+      res.json(req.session!.toInfo());
+      return;
+    }
+
+    res.status(400).json({ error: 'Request must include title or pinned', status: 400 });
   });
 
   // --- Terminal I/O ---
