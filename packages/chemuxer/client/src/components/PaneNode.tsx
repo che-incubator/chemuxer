@@ -43,6 +43,8 @@ interface PaneNodeProps {
   renamingSessionId?: string | null;
   onContextSplit?: (sessionId: string, zone: DropZone) => void;
   zoomed?: boolean;
+  isFocused?: boolean;
+  paneCount?: number;
 }
 
 export function PaneNode({
@@ -68,10 +70,21 @@ export function PaneNode({
   renamingSessionId,
   onContextSplit,
   zoomed,
+  isFocused,
+  paneCount,
 }: PaneNodeProps) {
   const { isDragging, startDrag, endDrag } = useDrag();
   const [hoveredZone, setHoveredZone] = useState<DropZone | null>(null);
   const terminalAreaRef = useRef<HTMLDivElement>(null);
+
+  const dimEnabled = settings.terminal.dimInactivePanes;
+  const dimEligible = dimEnabled && !zoomed && (paneCount ?? 1) > 1;
+
+  const paneClassName = [
+    'pane-node',
+    dimEligible && isFocused ? 'pane-focused' : '',
+    dimEligible && !isFocused ? 'pane-inactive' : '',
+  ].filter(Boolean).join(' ');
 
   const handleFocus = useCallback(() => onFocus(pane.id), [onFocus, pane.id]);
   const handleSelect = useCallback((sessionId: string) => onSelectSession(pane.id, sessionId), [onSelectSession, pane.id]);
@@ -126,7 +139,7 @@ export function PaneNode({
   );
 
   return (
-    <div className="pane-node" onClick={handleFocus}>
+    <div className={paneClassName} onClick={handleFocus}>
       <PaneTabBar
         paneId={pane.id}
         entries={pane.entries}
@@ -163,6 +176,7 @@ export function PaneNode({
                 wsUrl={wsUrl}
                 settings={settings}
                 visible={index === pane.activeEntryIndex}
+                isFocused={isFocused && index === pane.activeEntryIndex}
               />
             );
           } else {

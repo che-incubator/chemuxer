@@ -12,9 +12,10 @@ interface TerminalProps {
   wsUrl: string;
   visible: boolean;
   settings: Settings;
+  isFocused?: boolean;
 }
 
-export function Terminal({ sessionId, wsUrl, visible, settings }: TerminalProps) {
+export function Terminal({ sessionId, wsUrl, visible, settings, isFocused }: TerminalProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<XTerm | null>(null);
   const fitRef = useRef<FitAddon | null>(null);
@@ -99,6 +100,16 @@ export function Terminal({ sessionId, wsUrl, visible, settings }: TerminalProps)
       fitRef.current?.fit();
     }
   }, [settings.terminal.fontSize, settings.terminal.fontFamily, settings.terminal.theme]);
+
+  useEffect(() => {
+    const term = termRef.current;
+    if (!term || !visible) return;
+    if (isFocused) {
+      term.focus();
+    } else {
+      term.blur();
+    }
+  }, [isFocused, visible]);
 
   return (
     <div

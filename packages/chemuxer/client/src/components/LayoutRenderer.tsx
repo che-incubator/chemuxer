@@ -13,6 +13,7 @@ interface LayoutRendererProps {
   wsUrl: string;
   settings: Settings;
   zoomedPaneId?: string | null;
+  focusedPaneId?: string | null;
   onSelectSession: (paneId: string, sessionId: string) => void;
   onCloseSession: (sessionId: string) => void;
   onCreateSession: () => void;
@@ -39,6 +40,7 @@ export function LayoutRenderer({
   wsUrl,
   settings,
   zoomedPaneId,
+  focusedPaneId,
   onSelectSession,
   onCloseSession,
   onCreateSession,
@@ -57,7 +59,8 @@ export function LayoutRenderer({
   renamingSessionId,
   onContextSplit,
 }: LayoutRendererProps) {
-  const sharedProps = { panes, sessions, wsUrl, settings, zoomedPaneId, onSelectSession, onCloseSession, onCreateSession, onPinSession, onSplit, onMoveTab, onFocus, onSaveSettings, onSelectSettings, onMoveSettings, onSplitSettings, onCloseSettings, onRenameRequest, onRenameConfirm, onRenameCancel, renamingSessionId, onContextSplit, zoomed: !!zoomedPaneId };
+  const paneCount = Object.keys(panes).length;
+  const sharedProps = { panes, sessions, wsUrl, settings, zoomedPaneId, focusedPaneId, paneCount, onSelectSession, onCloseSession, onCreateSession, onPinSession, onSplit, onMoveTab, onFocus, onSaveSettings, onSelectSettings, onMoveSettings, onSplitSettings, onCloseSettings, onRenameRequest, onRenameConfirm, onRenameCancel, renamingSessionId, onContextSplit, zoomed: !!zoomedPaneId };
 
   if (zoomedPaneId) {
     const pane = panes[zoomedPaneId];
@@ -86,6 +89,8 @@ export function LayoutRenderer({
         renamingSessionId={renamingSessionId}
         onContextSplit={onContextSplit}
         zoomed={!!zoomedPaneId}
+        isFocused={focusedPaneId === pane.id}
+        paneCount={paneCount}
       />
     );
   }
@@ -116,6 +121,8 @@ export function LayoutRenderer({
         onRenameCancel={onRenameCancel}
         renamingSessionId={renamingSessionId}
         onContextSplit={onContextSplit}
+        isFocused={focusedPaneId === pane.id}
+        paneCount={paneCount}
       />
     );
   }
