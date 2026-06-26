@@ -18,6 +18,15 @@ const CREATED_SESSION: SessionInfo = {
   createdAt: 3000,
 };
 
+const CREATED_PINNED_SESSION: SessionInfo = {
+  id: 'sess-4',
+  shell: '/bin/bash',
+  title: 'pinned',
+  renamed: false,
+  createdAt: 4000,
+  pinned: true,
+};
+
 const FEED: FeedResponse = {
   entries: [{ timestamp: '2026-01-01T00:00:00Z', sessionId: 'sess-1', content: 'hello' }],
   nextSince: '2026-01-01T00:01:00Z',
@@ -38,6 +47,7 @@ function readBody(req: IncomingMessage): Promise<string> {
 
 let lastInputBody: string | undefined;
 let lastFeedUrl: string | undefined;
+let lastCreateSessionBody: string | undefined;
 
 function json(res: ServerResponse, status: number, data: unknown) {
   res.writeHead(status, { 'Content-Type': 'application/json' });
@@ -69,7 +79,15 @@ function handler(req: IncomingMessage, res: ServerResponse) {
 
   // POST /api/sessions
   if (method === 'POST' && path === '/api/sessions') {
-    json(res, 201, CREATED_SESSION);
+    readBody(req).then((body) => {
+      lastCreateSessionBody = body;
+      const parsed = body ? JSON.parse(body) : {};
+      if (parsed.pinned) {
+        json(res, 201, CREATED_PINNED_SESSION);
+      } else {
+        json(res, 201, CREATED_SESSION);
+      }
+    });
     return;
   }
 
@@ -89,7 +107,17 @@ function handler(req: IncomingMessage, res: ServerResponse) {
   }
 
   // DELETE /api/sessions/:id
-  if (method === 'DELETE' && /^\/api\/sessions\/[^/]+$/.test(path)) {
+  if (method === 'DELETE' && /^\/api\/sessions\/[^/]+(\\?.*)?$/.test(path)) {
+    const url = new URL(req.url!, 'http://localhost');
+    const sessionId = path.split('/')[3];
+    const force = url.searchParams.get('force') === 'true';
+
+    // Special session ID "PINNED" returns 409 without force=true
+    if (sessionId === 'PINNED' && !force) {
+      json(res, 409, { error: 'Session is pinned', code: 'SESSION_PINNED' });
+      return;
+    }
+
     json(res, 200, { ok: true });
     return;
   }
@@ -199,5 +227,29 @@ describe('ChemuxerClient', () => {
       expect((err as UpstreamError).statusCode).toBe(503);
       expect((err as UpstreamError).body).toBe('Service Unavailable');
     }
+  });
+
+  describe('pinned sessions', () => {
+    it('createSession sends pinned in body', async () => {
+      lastCreateSessionBody = undefined;
+      const session = await client.createSession(endpoint, { pinned: true });
+      expect(session).toEqual(CREATED_PINNED_SESSION);
+      expect(lastCreateSessionBody).toBeDefined();
+      expect(JSON.parse(lastCreateSessionBody!)).toEqual({ pinned: true });
+    });
+
+    it('closeSession with force appends force=true query param', async () => {
+      await expect(client.closeSession(endpoint, 'sess-1', { force: true })).resolves.toBeUndefined();
+    });
+
+    it('closeSession without force on pinned session throws UpstreamError 409', async () => {
+      try {
+        await client.closeSession(endpoint, 'PINNED');
+        expect.fail('Should have thrown');
+      } catch (err) {
+        expect(err).toBeInstanceOf(UpstreamError);
+        expect((err as UpstreamError).statusCode).toBe(409);
+      }
+    });
   });
 });

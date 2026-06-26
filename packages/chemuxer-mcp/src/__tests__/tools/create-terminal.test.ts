@@ -96,7 +96,7 @@ describe('create_terminal tool', () => {
     expect(body.workspace_status.workspace_name).toBe('ready-ws');
     expect(body.workspace_status.ready).toBe(true);
 
-    expect(client.createSession).toHaveBeenCalledWith('http://10.0.0.1:7681');
+    expect(client.createSession).toHaveBeenCalledWith('http://10.0.0.1:7681', { pinned: false });
   });
 
   it('uses resolved endpoint from resolver, not ws.endpoint directly', async () => {
@@ -115,7 +115,7 @@ describe('create_terminal tool', () => {
     await mc.close();
     await server.close();
 
-    expect(client.createSession).toHaveBeenCalledWith('http://resolved:9999');
+    expect(client.createSession).toHaveBeenCalledWith('http://resolved:9999', { pinned: false });
   });
 
   it('returns WORKSPACE_NOT_READY for non-ready workspace', async () => {

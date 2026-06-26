@@ -18,12 +18,13 @@ export function registerCreateTerminal(
       description: 'Create a new terminal session in a workspace.',
       inputSchema: z.object({
         workspace: z.string().describe('DevWorkspace name'),
+        pinned: z.boolean().default(false).describe('Pin session to prevent accidental close'),
       }),
     },
-    async ({ workspace }) => {
+    async ({ workspace, pinned }) => {
       try {
         const ws = await resolveWorkspace(store, resolver, workspace);
-        const session = await client.createSession(ws.resolvedEndpoint);
+        const session = await client.createSession(ws.resolvedEndpoint, { pinned });
         return {
           content: [{
             type: 'text' as const,

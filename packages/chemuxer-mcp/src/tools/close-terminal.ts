@@ -19,12 +19,13 @@ export function registerCloseTerminal(
       inputSchema: z.object({
         workspace: z.string().describe('DevWorkspace name'),
         session_id: sessionIdSchema,
+        force: z.boolean().default(false).describe('Force close even if session is pinned'),
       }),
     },
-    async ({ workspace, session_id }) => {
+    async ({ workspace, session_id, force }) => {
       try {
         const ws = await resolveWorkspace(store, resolver, workspace);
-        await client.closeSession(ws.resolvedEndpoint, session_id);
+        await client.closeSession(ws.resolvedEndpoint, session_id, { force });
         return {
           content: [{
             type: 'text' as const,
