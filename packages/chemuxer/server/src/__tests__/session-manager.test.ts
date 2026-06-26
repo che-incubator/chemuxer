@@ -108,4 +108,55 @@ describe('SessionManager', () => {
     const session = manager.createSession();
     expect(session).toBeTruthy();
   });
+
+  describe('pinning', () => {
+    it('pinSession returns true and updates session', () => {
+      manager = new SessionManager(mockSettingsManager());
+      const session = manager.createSession();
+      expect(manager.pinSession(session.id, true)).toBe(true);
+      expect(manager.getSession(session.id)!.pinned).toBe(true);
+    });
+
+    it('pinSession returns false for unknown session', () => {
+      manager = new SessionManager(mockSettingsManager());
+      expect(manager.pinSession('nonexistent', true)).toBe(false);
+    });
+
+    it('closeSession rejects pinned session without force', () => {
+      manager = new SessionManager(mockSettingsManager());
+      const session = manager.createSession();
+      manager.pinSession(session.id, true);
+      expect(manager.closeSession(session.id)).toBe('pinned');
+      expect(manager.getSession(session.id)).toBeDefined();
+    });
+
+    it('closeSession with force closes pinned session', () => {
+      manager = new SessionManager(mockSettingsManager());
+      const session = manager.createSession();
+      manager.pinSession(session.id, true);
+      expect(manager.closeSession(session.id, true)).toBe('closed');
+      expect(manager.getSession(session.id)).toBeUndefined();
+    });
+
+    it('closeSession returns not_found for unknown session', () => {
+      manager = new SessionManager(mockSettingsManager());
+      expect(manager.closeSession('nonexistent')).toBe('not_found');
+    });
+
+    it('process exit bypasses pin', async () => {
+      manager = new SessionManager(mockSettingsManager());
+      const session = manager.createSession();
+      const sessionId = session.id;
+      manager.pinSession(sessionId, true);
+
+      // Close the session to trigger the exit event
+      session.close();
+
+      // Wait for the PTY exit callback to fire (can take up to a few hundred ms)
+      await new Promise((r) => setTimeout(r, 500));
+
+      // Verify the pinned session was removed despite being pinned
+      expect(manager.getSession(sessionId)).toBeUndefined();
+    });
+  });
 });
