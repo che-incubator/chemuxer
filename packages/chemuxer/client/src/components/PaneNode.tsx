@@ -77,12 +77,12 @@ export function PaneNode({
   const [hoveredZone, setHoveredZone] = useState<DropZone | null>(null);
   const terminalAreaRef = useRef<HTMLDivElement>(null);
 
-  const dimEnabled = settings.terminal.dimInactivePanes;
-  const dimEligible = dimEnabled && !zoomed && (paneCount ?? 1) > 1;
+  const multiPane = !zoomed && (paneCount ?? 1) > 1;
+  const dimEligible = settings.terminal.dimInactivePanes && multiPane;
 
   const paneClassName = [
     'pane-node',
-    dimEligible && isFocused ? 'pane-focused' : '',
+    multiPane && isFocused ? 'pane-focused' : '',
     dimEligible && !isFocused ? 'pane-inactive' : '',
   ].filter(Boolean).join(' ');
 
