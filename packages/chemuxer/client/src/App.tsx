@@ -147,7 +147,7 @@ export function App() {
           <PinConfirmModal
             sessionTitle={pendingClose.title}
             onConfirm={() => {
-              control.closeSession(pendingClose.sessionId);
+              control.closeSession(pendingClose.sessionId, true);
               setPendingClose(null);
             }}
             onCancel={() => setPendingClose(null)}

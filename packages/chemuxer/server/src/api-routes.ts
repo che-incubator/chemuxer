@@ -186,17 +186,19 @@ export function createApiRouter(
   router.patch('/api/sessions/:id', (req, res) => {
     const { title, pinned } = req.body;
 
+    if (title === undefined && pinned === undefined) {
+      res.status(400).json({ error: 'Request must include title or pinned', status: 400 });
+      return;
+    }
+
     if (title !== undefined) {
       if (typeof title !== 'string') {
         res.status(400).json({ error: 'title must be a string', status: 400 });
         return;
       }
-      const session = req.session!;
-      session.rename(title);
-      const info = session.toInfo();
+      req.session!.rename(title);
+      const info = req.session!.toInfo();
       broadcastControl({ type: 'session-renamed', sessionId: info.id, title: info.title, renamed: info.renamed });
-      res.json(info);
-      return;
     }
 
     if (pinned !== undefined) {
@@ -206,11 +208,9 @@ export function createApiRouter(
       }
       manager.pinSession(req.params.id, pinned);
       broadcastControl({ type: 'session-pinned', sessionId: req.params.id, pinned });
-      res.json(req.session!.toInfo());
-      return;
     }
 
-    res.status(400).json({ error: 'Request must include title or pinned', status: 400 });
+    res.json(req.session!.toInfo());
   });
 
   // --- Terminal I/O ---

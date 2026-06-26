@@ -152,8 +152,12 @@ describe('SessionManager', () => {
       // Close the session to trigger the exit event
       session.close();
 
-      // Wait for the PTY exit callback to fire (can take up to a few hundred ms)
-      await new Promise((r) => setTimeout(r, 500));
+      // Wait for the PTY exit callback to fire
+      const maxWait = 2000;
+      const start = Date.now();
+      while (manager.getSession(sessionId) !== undefined && Date.now() - start < maxWait) {
+        await new Promise((r) => setTimeout(r, 50));
+      }
 
       // Verify the pinned session was removed despite being pinned
       expect(manager.getSession(sessionId)).toBeUndefined();
