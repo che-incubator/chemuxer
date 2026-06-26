@@ -7,6 +7,7 @@ import { useCommands } from './hooks/useCommands.js';
 import { LayoutRenderer } from './components/LayoutRenderer.js';
 import { CommandPalette } from './components/CommandPalette.js';
 import { ConnectionBanner } from './components/ConnectionBanner.js';
+import { PinConfirmModal } from './components/PinConfirmModal.js';
 import { DragProvider } from './contexts/DragContext.js';
 import { basePath } from './utils/basePath.js';
 import type { DropZone } from './types/layout.js';
@@ -23,10 +24,20 @@ export function App() {
   });
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [renamingSessionId, setRenamingSessionId] = useState<string | null>(null);
+  const [pendingClose, setPendingClose] = useState<{ sessionId: string; title: string } | null>(null);
 
   const handleRenameRequest = useCallback((sessionId: string) => {
     setRenamingSessionId(sessionId);
   }, []);
+
+  const handleCloseSession = useCallback((sessionId: string) => {
+    const session = control.sessions.find((s) => s.id === sessionId);
+    if (session?.pinned) {
+      setPendingClose({ sessionId, title: session.title });
+    } else {
+      control.closeSession(sessionId);
+    }
+  }, [control]);
 
   const commands = useCommands(
     {
@@ -34,7 +45,7 @@ export function App() {
       focusedPaneId: layout.focusedPaneId,
       zoomedPaneId: layout.zoomedPaneId,
       createSession: control.createSession,
-      closeSession: control.closeSession,
+      closeSession: handleCloseSession,
       openSettings: layout.openSettings,
       toggleZoom: layout.toggleZoom,
       createSplitSession: layout.createSplitSession,
@@ -109,8 +120,9 @@ export function App() {
             settings={settings}
             zoomedPaneId={layout.zoomedPaneId}
             onSelectSession={layout.setActiveSession}
-            onCloseSession={control.closeSession}
+            onCloseSession={handleCloseSession}
             onCreateSession={control.createSession}
+            onPinSession={control.pinSession}
             onSplit={layout.splitPane}
             onMoveTab={layout.moveTab}
             onFocus={layout.setFocusedPane}
@@ -131,6 +143,16 @@ export function App() {
           onOpenChange={handlePaletteOpenChange}
           commands={commands}
         />
+        {pendingClose && (
+          <PinConfirmModal
+            sessionTitle={pendingClose.title}
+            onConfirm={() => {
+              control.closeSession(pendingClose.sessionId, true);
+              setPendingClose(null);
+            }}
+            onCancel={() => setPendingClose(null)}
+          />
+        )}
       </div>
     </DragProvider>
   );

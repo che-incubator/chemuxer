@@ -137,13 +137,30 @@ export function setupWebSocketServer(
           return;
         }
       } else if (msg.type === 'close') {
-        mgr.closeSession(msg.sessionId);
-        broadcastControl({ type: 'session-closed', sessionId: msg.sessionId, exitCode: null });
+        const result = mgr.closeSession(msg.sessionId);
+        if (result === 'pinned') {
+          ws.send(JSON.stringify({
+            type: 'error',
+            error: 'Session is pinned',
+            code: 'SESSION_PINNED',
+            sessionId: msg.sessionId,
+          }));
+        } else if (result === 'closed') {
+          broadcastControl({ type: 'session-closed', sessionId: msg.sessionId, exitCode: null });
+        }
       } else if (msg.type === 'rename') {
         const session = mgr.getSession(msg.sessionId);
         if (session) {
           session.rename(msg.title);
           broadcastControl({ type: 'session-renamed', sessionId: msg.sessionId, title: session.title, renamed: session.toInfo().renamed });
+        }
+      } else if (msg.type === 'pin') {
+        const session = mgr.getSession(msg.sessionId);
+        if (session) {
+          mgr.pinSession(msg.sessionId, msg.pinned);
+          broadcastControl({ type: 'session-pinned', sessionId: msg.sessionId, pinned: msg.pinned });
+        } else {
+          ws.send(JSON.stringify({ type: 'error', error: `Session "${msg.sessionId}" not found` }));
         }
       }
     });

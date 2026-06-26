@@ -28,6 +28,7 @@ interface PaneNodeProps {
   onSelectSession: (paneId: string, sessionId: string) => void;
   onCloseSession: (sessionId: string) => void;
   onCreateSession: () => void;
+  onPinSession: (sessionId: string, pinned: boolean) => void;
   onSplit: (targetPaneId: string, sessionId: string, zone: DropZone) => void;
   onMoveTab: (sessionId: string, sourcePaneId: string, targetPaneId: string) => void;
   onFocus: (paneId: string) => void;
@@ -52,6 +53,7 @@ export function PaneNode({
   onSelectSession,
   onCloseSession,
   onCreateSession,
+  onPinSession,
   onSplit,
   onMoveTab,
   onFocus,
@@ -138,6 +140,7 @@ export function PaneNode({
         onDragStart={startDrag}
         onDragEnd={endDrag}
         onRename={onRenameRequest}
+        onPin={onPinSession}
         onSplit={onContextSplit}
         renamingSessionId={renamingSessionId}
         onRenameConfirm={onRenameConfirm}

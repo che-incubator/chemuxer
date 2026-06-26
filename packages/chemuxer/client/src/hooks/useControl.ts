@@ -5,8 +5,9 @@ import type { SessionInfo, ServerControlMessage } from '@chemuxer/shared';
 export interface ControlState {
   sessions: SessionInfo[];
   createSession: () => void;
-  closeSession: (id: string) => void;
+  closeSession: (id: string, force?: boolean) => void;
   renameSession: (id: string, title: string) => void;
+  pinSession: (id: string, pinned: boolean) => void;
   connected: boolean;
   retryIn: number | null;
 }
@@ -39,6 +40,10 @@ export function useControl(url: string, options?: ControlOptions): ControlState 
       setSessions((prev) =>
         prev.map((s) => s.id === msg.sessionId ? { ...s, title: msg.title, renamed: msg.renamed } : s)
       );
+    } else if (msg.type === 'session-pinned') {
+      setSessions((prev) =>
+        prev.map((s) => s.id === msg.sessionId ? { ...s, pinned: msg.pinned } : s)
+      );
     } else if (msg.type === 'settings-changed') {
       onSettingsChangedRef.current?.(msg.settings);
     }
@@ -53,14 +58,21 @@ export function useControl(url: string, options?: ControlOptions): ControlState 
   }, [connState]);
 
   const createSession = useCallback(() => send({ type: 'create' }), [send]);
-  const closeSession = useCallback((id: string) => send({ type: 'close', sessionId: id }), [send]);
+  const closeSession = useCallback((id: string, force?: boolean) => {
+    if (force) {
+      send({ type: 'pin', sessionId: id, pinned: false });
+    }
+    send({ type: 'close', sessionId: id });
+  }, [send]);
   const renameSession = useCallback((id: string, title: string) => send({ type: 'rename', sessionId: id, title }), [send]);
+  const pinSession = useCallback((id: string, pinned: boolean) => send({ type: 'pin', sessionId: id, pinned }), [send]);
 
   return {
     sessions,
     createSession,
     closeSession,
     renameSession,
+    pinSession,
     connected: connState.status === 'connected',
     retryIn: connState.status === 'disconnected' ? connState.retryIn : null,
   };

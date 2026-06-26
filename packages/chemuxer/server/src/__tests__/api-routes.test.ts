@@ -298,4 +298,94 @@ describe('API Routes', { timeout: 30000 }, () => {
     expect(res.status).toBe(200);
     expect(res.headers.get('content-type')).toContain('application/json');
   });
+
+  // --- Pin support ---
+  describe('PATCH /api/sessions/:id (pin)', () => {
+    it('pins a session', async () => {
+      const createRes = await fetch(`${baseUrl}/api/sessions`, { method: 'POST' });
+      const { id } = await createRes.json();
+      const res = await fetch(`${baseUrl}/api/sessions/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pinned: true }),
+      });
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.pinned).toBe(true);
+    });
+
+    it('unpins a session', async () => {
+      const createRes = await fetch(`${baseUrl}/api/sessions`, { method: 'POST' });
+      const { id } = await createRes.json();
+      manager.pinSession(id, true);
+      const res = await fetch(`${baseUrl}/api/sessions/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pinned: false }),
+      });
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.pinned).toBe(false);
+    });
+
+    it('returns 400 when pinned is not a boolean', async () => {
+      const createRes = await fetch(`${baseUrl}/api/sessions`, { method: 'POST' });
+      const { id } = await createRes.json();
+      const res = await fetch(`${baseUrl}/api/sessions/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pinned: 'yes' }),
+      });
+      expect(res.status).toBe(400);
+    });
+  });
+
+  describe('DELETE /api/sessions/:id (pin guard)', () => {
+    it('returns 409 for pinned session without force', async () => {
+      const createRes = await fetch(`${baseUrl}/api/sessions`, { method: 'POST' });
+      const { id } = await createRes.json();
+      manager.pinSession(id, true);
+      const res = await fetch(`${baseUrl}/api/sessions/${id}`, { method: 'DELETE' });
+      expect(res.status).toBe(409);
+      const body = await res.json();
+      expect(body.code).toBe('SESSION_PINNED');
+    });
+
+    it('closes pinned session with force=true', async () => {
+      const createRes = await fetch(`${baseUrl}/api/sessions`, { method: 'POST' });
+      const { id } = await createRes.json();
+      manager.pinSession(id, true);
+      const res = await fetch(`${baseUrl}/api/sessions/${id}?force=true`, { method: 'DELETE' });
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.ok).toBe(true);
+    });
+
+    it('closes unpinned session normally', async () => {
+      const createRes = await fetch(`${baseUrl}/api/sessions`, { method: 'POST' });
+      const { id } = await createRes.json();
+      const res = await fetch(`${baseUrl}/api/sessions/${id}`, { method: 'DELETE' });
+      expect(res.status).toBe(200);
+    });
+  });
+
+  describe('POST /api/sessions (pinned option)', () => {
+    it('creates session with pinned=true', async () => {
+      const res = await fetch(`${baseUrl}/api/sessions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pinned: true }),
+      });
+      expect(res.status).toBe(201);
+      const body = await res.json();
+      expect(body.pinned).toBe(true);
+    });
+
+    it('creates session defaults to unpinned', async () => {
+      const res = await fetch(`${baseUrl}/api/sessions`, { method: 'POST' });
+      expect(res.status).toBe(201);
+      const body = await res.json();
+      expect(body.pinned).toBe(false);
+    });
+  });
 });

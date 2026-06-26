@@ -1,6 +1,6 @@
 import fs from 'fs';
 import { Session } from './session.js';
-import type { SessionInfo } from '@chemuxer/shared';
+import type { SessionInfo, ServerControlMessage } from '@chemuxer/shared';
 import type { SettingsManager } from './settings-manager.js';
 
 function getValidShells(): Set<string> {
@@ -51,7 +51,7 @@ export class SessionManager {
   private sessions = new Map<string, Session>();
   private shell: string;
   private scrollbackLines: number;
-  private broadcastControl?: (data: object) => void;
+  private broadcastControl?: (data: ServerControlMessage) => void;
 
   constructor(settingsManager: SettingsManager) {
     const settings = settingsManager.getSettings();
@@ -68,7 +68,7 @@ export class SessionManager {
     });
   }
 
-  setBroadcastControl(fn: (data: object) => void): void {
+  setBroadcastControl(fn: (data: ServerControlMessage) => void): void {
     this.broadcastControl = fn;
   }
 
@@ -81,7 +81,7 @@ export class SessionManager {
 
     session.onExit((exitCode) => {
       if (!this.sessions.has(session.id)) return;
-      this.closeSession(session.id);
+      this.closeSession(session.id, true);
       this.broadcastControl?.({ type: 'session-closed', sessionId: session.id, exitCode });
     });
 
@@ -98,17 +98,29 @@ export class SessionManager {
     return Array.from(this.sessions.values()).map((s) => s.toInfo());
   }
 
-  closeSession(id: string): void {
+  pinSession(id: string, pinned: boolean): boolean {
     const session = this.sessions.get(id);
-    if (session) {
-      session.close();
-      this.sessions.delete(id);
+    if (!session) return false;
+    if (pinned) {
+      session.pin();
+    } else {
+      session.unpin();
     }
+    return true;
+  }
+
+  closeSession(id: string, force?: boolean): 'closed' | 'pinned' | 'not_found' {
+    const session = this.sessions.get(id);
+    if (!session) return 'not_found';
+    if (session.pinned && !force) return 'pinned';
+    session.close();
+    this.sessions.delete(id);
+    return 'closed';
   }
 
   closeAll(): void {
     for (const [id] of this.sessions) {
-      this.closeSession(id);
+      this.closeSession(id, true);
     }
   }
 }

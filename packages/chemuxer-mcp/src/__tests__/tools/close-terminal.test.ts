@@ -74,7 +74,7 @@ describe('close_terminal tool', () => {
     expect(body.workspace_status.workspace_name).toBe('ready-ws');
     expect(body.workspace_status.ready).toBe(true);
 
-    expect(client.closeSession).toHaveBeenCalledWith('http://10.0.0.1:7681', 'sess-1');
+    expect(client.closeSession).toHaveBeenCalledWith('http://10.0.0.1:7681', 'sess-1', { force: false });
   });
 
   it('returns WORKSPACE_NOT_FOUND for unknown workspace', async () => {

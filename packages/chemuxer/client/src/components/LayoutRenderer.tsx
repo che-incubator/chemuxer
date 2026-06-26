@@ -16,6 +16,7 @@ interface LayoutRendererProps {
   onSelectSession: (paneId: string, sessionId: string) => void;
   onCloseSession: (sessionId: string) => void;
   onCreateSession: () => void;
+  onPinSession: (sessionId: string, pinned: boolean) => void;
   onSplit: (targetPaneId: string, sessionId: string, zone: DropZone) => void;
   onMoveTab: (sessionId: string, sourcePaneId: string, targetPaneId: string) => void;
   onFocus: (paneId: string) => void;
@@ -41,6 +42,7 @@ export function LayoutRenderer({
   onSelectSession,
   onCloseSession,
   onCreateSession,
+  onPinSession,
   onSplit,
   onMoveTab,
   onFocus,
@@ -55,7 +57,7 @@ export function LayoutRenderer({
   renamingSessionId,
   onContextSplit,
 }: LayoutRendererProps) {
-  const sharedProps = { panes, sessions, wsUrl, settings, zoomedPaneId, onSelectSession, onCloseSession, onCreateSession, onSplit, onMoveTab, onFocus, onSaveSettings, onSelectSettings, onMoveSettings, onSplitSettings, onCloseSettings, onRenameRequest, onRenameConfirm, onRenameCancel, renamingSessionId, onContextSplit, zoomed: !!zoomedPaneId };
+  const sharedProps = { panes, sessions, wsUrl, settings, zoomedPaneId, onSelectSession, onCloseSession, onCreateSession, onPinSession, onSplit, onMoveTab, onFocus, onSaveSettings, onSelectSettings, onMoveSettings, onSplitSettings, onCloseSettings, onRenameRequest, onRenameConfirm, onRenameCancel, renamingSessionId, onContextSplit, zoomed: !!zoomedPaneId };
 
   if (zoomedPaneId) {
     const pane = panes[zoomedPaneId];
@@ -69,6 +71,7 @@ export function LayoutRenderer({
         onSelectSession={onSelectSession}
         onCloseSession={onCloseSession}
         onCreateSession={onCreateSession}
+        onPinSession={onPinSession}
         onSplit={onSplit}
         onMoveTab={onMoveTab}
         onFocus={onFocus}
@@ -99,6 +102,7 @@ export function LayoutRenderer({
         onSelectSession={onSelectSession}
         onCloseSession={onCloseSession}
         onCreateSession={onCreateSession}
+        onPinSession={onPinSession}
         onSplit={onSplit}
         onMoveTab={onMoveTab}
         onFocus={onFocus}

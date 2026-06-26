@@ -26,12 +26,15 @@ export class ChemuxerClient {
     await this.post(`${endpoint}/api/sessions/${encodeURIComponent(sessionId)}/input`, { data });
   }
 
-  async createSession(endpoint: string): Promise<SessionInfo> {
-    return this.post<SessionInfo>(`${endpoint}/api/sessions`, {});
+  async createSession(endpoint: string, opts?: { pinned?: boolean }): Promise<SessionInfo> {
+    const body: Record<string, unknown> = {};
+    if (opts?.pinned) body.pinned = true;
+    return this.post<SessionInfo>(`${endpoint}/api/sessions`, body);
   }
 
-  async closeSession(endpoint: string, sessionId: string): Promise<void> {
-    await this.del(`${endpoint}/api/sessions/${encodeURIComponent(sessionId)}`);
+  async closeSession(endpoint: string, sessionId: string, opts?: { force?: boolean }): Promise<void> {
+    const query = opts?.force ? '?force=true' : '';
+    await this.del(`${endpoint}/api/sessions/${encodeURIComponent(sessionId)}${query}`);
   }
 
   async getFeed(endpoint: string, sessionId?: string, since?: string): Promise<FeedResponse> {

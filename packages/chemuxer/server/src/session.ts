@@ -28,6 +28,7 @@ export class Session {
   private exitListeners: ExitCallback[] = [];
   private _isClosed: boolean = false;
   private pendingWrites: number = 0;
+  private _pinned: boolean = false;
 
   constructor(shell: string, options: SessionOptions = {}) {
     this.id = crypto.randomUUID();
@@ -79,6 +80,18 @@ export class Session {
 
   rename(title: string): void {
     this.customTitle = title.trim() === '' ? null : title;
+  }
+
+  get pinned(): boolean {
+    return this._pinned;
+  }
+
+  pin(): void {
+    this._pinned = true;
+  }
+
+  unpin(): void {
+    this._pinned = false;
   }
 
   get isClosed(): boolean {
@@ -146,6 +159,7 @@ export class Session {
       shell: this.shell,
       title: this.title,
       renamed: this.customTitle !== null,
+      pinned: this._pinned,
       createdAt: this.createdAt,
     };
   }

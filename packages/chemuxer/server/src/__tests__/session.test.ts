@@ -101,6 +101,23 @@ describe('Session', () => {
     expect(session.title).toBe(TEST_SHELL_NAME);
   });
 
+  describe('pinning', () => {
+    it('defaults to unpinned', () => {
+      session = new Session(TEST_SHELL);
+      expect(session.pinned).toBe(false);
+      expect(session.toInfo().pinned).toBe(false);
+    });
+
+    it('can be pinned and unpinned', () => {
+      session = new Session(TEST_SHELL);
+      session.pin();
+      expect(session.pinned).toBe(true);
+      expect(session.toInfo().pinned).toBe(true);
+      session.unpin();
+      expect(session.pinned).toBe(false);
+    });
+  });
+
   it('close kills the PTY process and disposes headless terminal', () => {
     session = new Session(TEST_SHELL);
     session.close();
