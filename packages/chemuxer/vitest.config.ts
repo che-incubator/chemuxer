@@ -7,6 +7,11 @@ export default defineConfig({
       'client/src/__tests__/**/*.test.{ts,tsx}',
     ],
     environment: 'jsdom',
+    environmentOptions: {
+      jsdom: {
+        url: 'http://localhost',
+      },
+    },
     environmentMatchGlobs: [
       ['server/src/__tests__/**', 'node'],
     ],
