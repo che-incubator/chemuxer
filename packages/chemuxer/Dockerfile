@@ -23,8 +23,15 @@ FROM node:22-alpine
 RUN apk add --no-cache python3 make g++
 WORKDIR /app
 
-# Only install node-pty (the sole native dependency that can't be bundled)
-RUN npm init -y && npm install node-pty@1.1.0 && apk del python3 make g++
+# Only install node-pty (the sole native dependency that can't be bundled).
+# node-pty ships prebuilds for darwin/windows but not linux — it compiles from
+# source into build/Release/pty.node. The resolver also checks
+# prebuilds/linux-<arch>/ and fails if absent. Create the expected directory
+# with a symlink so both resolution paths work.
+RUN npm init -y && npm install node-pty@1.1.0 && apk del python3 make g++ \
+    && ARCH=$(uname -m | sed 's/x86_64/x64/' | sed 's/aarch64/arm64/') \
+    && mkdir -p node_modules/node-pty/prebuilds/linux-${ARCH} \
+    && ln -s ../../build/Release/pty.node node_modules/node-pty/prebuilds/linux-${ARCH}/pty.node
 
 # Create non-root user and transfer ownership
 RUN adduser -D -h /home/chemuxer chemuxer && chown -R chemuxer:chemuxer /app
