@@ -103,11 +103,11 @@ describe('useDevfileCommands', () => {
     result.current.revalidateIfStale();
 
     await waitFor(() => {
-      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect(result.current.commands).toEqual([
+        { id: 'test', component: 'tools', commandLine: 'test' },
+      ]);
     });
 
-    expect(result.current.commands).toEqual([
-      { id: 'test', component: 'tools', commandLine: 'test' },
-    ]);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });
