@@ -22,6 +22,20 @@ if (!globalThis.localStorage) {
   });
 }
 
+// Mock ResizeObserver for cmdk library
+if (!globalThis.ResizeObserver) {
+  globalThis.ResizeObserver = class ResizeObserver {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  };
+}
+
+// Mock scrollIntoView for cmdk library
+if (!Element.prototype.scrollIntoView) {
+  Element.prototype.scrollIntoView = () => {};
+}
+
 afterEach(() => {
   cleanup();
 });
