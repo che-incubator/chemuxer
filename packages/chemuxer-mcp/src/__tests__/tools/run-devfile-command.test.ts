@@ -115,7 +115,7 @@ describe('run_devfile_command tool', () => {
     expect(client.sendInput).toHaveBeenCalledWith(
       'http://10.0.0.1:7681',
       'new-session-id',
-      'cd ${PROJECT_SOURCE} && go build ./...\n',
+      "cd '${PROJECT_SOURCE}' && go build ./...\n",
     );
   });
 
@@ -198,6 +198,22 @@ describe('run_devfile_command tool', () => {
   it('returns UPSTREAM_ERROR when createSession throws', async () => {
     const client = makeClient({
       createSession: vi.fn().mockRejectedValue(new UpstreamError(500, 'server error')),
+    });
+    const store = makeStore([readyWorkspace]);
+
+    const result = await callRunDevfileCommand(store, client, {
+      workspace: 'ready-ws',
+      command_id: 'build',
+    });
+    expect(result.isError).toBe(true);
+
+    const body = parseResult(result);
+    expect(body.error_code).toBe('UPSTREAM_ERROR');
+  });
+
+  it('returns UPSTREAM_ERROR when sendInput throws', async () => {
+    const client = makeClient({
+      sendInput: vi.fn().mockRejectedValue(new UpstreamError(500, 'server error')),
     });
     const store = makeStore([readyWorkspace]);
 

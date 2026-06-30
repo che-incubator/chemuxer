@@ -272,7 +272,7 @@ describe('API Routes', { timeout: 30000 }, () => {
     const res = await fetch(`${baseUrl}/api/devfile-commands`);
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(Array.isArray(body)).toBe(true);
+    expect(body).toEqual([]);
   });
 
   it('GET /api/sessions lists sessions after POST', async () => {

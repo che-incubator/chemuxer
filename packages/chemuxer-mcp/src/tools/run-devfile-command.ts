@@ -36,7 +36,7 @@ export function registerRunDevfileCommand(
         const session = await client.createSession(endpoint, { pinned: false });
 
         const commandText = cmd.workingDir
-          ? `cd ${cmd.workingDir} && ${cmd.commandLine}\n`
+          ? `cd '${cmd.workingDir.replace(/'/g, `'\\''`)}' && ${cmd.commandLine}\n`
           : `${cmd.commandLine}\n`;
         await client.sendInput(endpoint, session.id, commandText);
 
