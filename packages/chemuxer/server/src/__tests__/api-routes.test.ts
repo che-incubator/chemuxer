@@ -1,10 +1,30 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import http from 'http';
 import express from 'express';
 import { SessionManager } from '../session-manager.js';
 import { FeedCollector } from '../feed-collector.js';
 import { createApiRouter } from '../api-routes.js';
 import { DEFAULT_SETTINGS } from '@chemuxer/shared';
+import { Session } from '../session.js';
+
+vi.mock('../devfile-commands', () => ({
+  loadDevfileCommands: vi.fn(() => [
+    {
+      id: 'build-app',
+      label: 'Build Application',
+      component: 'tools',
+      commandLine: 'npm run build',
+      group: 'build',
+    },
+    {
+      id: 'test-unit',
+      component: 'tools',
+      commandLine: 'npm test',
+      workingDir: '/projects/app',
+      group: 'test',
+    },
+  ]),
+}));
 
 function mockSettingsManager() {
   return {
@@ -22,9 +42,12 @@ describe('API Routes', { timeout: 30000 }, () => {
   let feedCollector: FeedCollector;
   let baseUrl: string;
   let broadcasts: object[];
+  let mockWrite: ReturnType<typeof vi.fn>;
 
   beforeEach(async () => {
     broadcasts = [];
+    mockWrite = vi.fn();
+    vi.spyOn(Session.prototype, 'write').mockImplementation(mockWrite);
     manager = new SessionManager(mockSettingsManager());
     feedCollector = new FeedCollector(manager, { intervalMs: 60000, maxEntries: 10 });
     const broadcastControl = (data: object) => { broadcasts.push(data); };
@@ -41,6 +64,7 @@ describe('API Routes', { timeout: 30000 }, () => {
   });
 
   afterEach(async () => {
+    vi.restoreAllMocks();
     feedCollector.stop();
     manager.closeAll();
     await new Promise(r => setTimeout(r, 100));
@@ -393,6 +417,79 @@ describe('API Routes', { timeout: 30000 }, () => {
       expect(res.status).toBe(201);
       const body = await res.json();
       expect(body.pinned).toBe(false);
+    });
+  });
+
+  describe('POST /api/sessions with devfileCommandId', () => {
+    it('should create session and execute devfile command', async () => {
+      const res = await fetch(`${baseUrl}/api/sessions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ devfileCommandId: 'build-app' }),
+      });
+      expect(res.status).toBe(201);
+      const body = await res.json();
+
+      expect(body).toMatchObject({
+        id: expect.any(String),
+        title: 'build: Build Application',
+        shell: expect.any(String),
+      });
+
+      const session = manager.getSession(body.id);
+      expect(session).toBeDefined();
+      expect(session?.title).toBe('build: Build Application');
+      expect(mockWrite).toHaveBeenCalledWith('npm run build\n');
+    });
+
+    it('should handle workingDir with cd command', async () => {
+      const res = await fetch(`${baseUrl}/api/sessions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ devfileCommandId: 'test-unit' }),
+      });
+      expect(res.status).toBe(201);
+      const body = await res.json();
+      expect(body.title).toBe('test: test-unit');
+
+      const session = manager.getSession(body.id);
+      expect(mockWrite).toHaveBeenCalledWith("cd '/projects/app' && npm test\n");
+    });
+
+    it('should return 404 if devfileCommandId not found', async () => {
+      const res = await fetch(`${baseUrl}/api/sessions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ devfileCommandId: 'nonexistent' }),
+      });
+      expect(res.status).toBe(404);
+      const body = await res.json();
+
+      expect(body).toMatchObject({
+        error: 'Devfile command not found: nonexistent',
+      });
+    });
+
+    it('should use "task" prefix when no group specified', async () => {
+      const { loadDevfileCommands } = await import('../devfile-commands.js');
+      vi.mocked(loadDevfileCommands).mockReturnValueOnce([
+        {
+          id: 'custom-cmd',
+          label: 'Custom Command',
+          component: 'tools',
+          commandLine: 'echo hello',
+        },
+      ]);
+
+      const res = await fetch(`${baseUrl}/api/sessions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ devfileCommandId: 'custom-cmd' }),
+      });
+      expect(res.status).toBe(201);
+      const body = await res.json();
+
+      expect(body.title).toBe('task: Custom Command');
     });
   });
 });
