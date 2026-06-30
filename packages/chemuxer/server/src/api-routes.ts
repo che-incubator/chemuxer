@@ -5,6 +5,7 @@ import type { SettingsManager } from './settings-manager.js';
 import type { FeedCollector } from './feed-collector.js';
 import { stripAnsi } from './strip-ansi.js';
 import type { ServerControlMessage } from '@chemuxer/shared';
+import { loadDevfileCommands } from './devfile-commands.js';
 
 const AGENTS_MD = `# Chemuxer — Agent Instructions
 
@@ -238,6 +239,11 @@ export function createApiRouter(
   router.get('/api/feed', (req, res) => {
     const since = req.query.since as string | undefined;
     res.json(feedCollector.getAllFeed(since));
+  });
+
+  // --- Devfile commands ---
+  router.get('/api/devfile-commands', (_req, res) => {
+    res.json(loadDevfileCommands());
   });
 
   return router;

@@ -268,6 +268,13 @@ describe('API Routes', { timeout: 30000 }, () => {
     expect(body.entries).toEqual([]);
   });
 
+  it('GET /api/devfile-commands returns empty array when metadata file absent', async () => {
+    const res = await fetch(`${baseUrl}/api/devfile-commands`);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(Array.isArray(body)).toBe(true);
+  });
+
   it('GET /api/sessions lists sessions after POST', async () => {
     await fetch(`${baseUrl}/api/sessions`, { method: 'POST' });
     await fetch(`${baseUrl}/api/sessions`, { method: 'POST' });
