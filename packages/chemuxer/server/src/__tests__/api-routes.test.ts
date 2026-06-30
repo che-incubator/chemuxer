@@ -6,25 +6,7 @@ import { FeedCollector } from '../feed-collector.js';
 import { createApiRouter } from '../api-routes.js';
 import { DEFAULT_SETTINGS } from '@chemuxer/shared';
 import { Session } from '../session.js';
-
-vi.mock('../devfile-commands', () => ({
-  loadDevfileCommands: vi.fn(() => [
-    {
-      id: 'build-app',
-      label: 'Build Application',
-      component: 'tools',
-      commandLine: 'npm run build',
-      group: 'build',
-    },
-    {
-      id: 'test-unit',
-      component: 'tools',
-      commandLine: 'npm test',
-      workingDir: '/projects/app',
-      group: 'test',
-    },
-  ]),
-}));
+import * as devfileCommandsModule from '../devfile-commands.js';
 
 function mockSettingsManager() {
   return {
@@ -421,6 +403,25 @@ describe('API Routes', { timeout: 30000 }, () => {
   });
 
   describe('POST /api/sessions with devfileCommandId', () => {
+    beforeEach(() => {
+      vi.spyOn(devfileCommandsModule, 'loadDevfileCommands').mockReturnValue([
+        {
+          id: 'build-app',
+          label: 'Build Application',
+          component: 'tools',
+          commandLine: 'npm run build',
+          group: 'build',
+        },
+        {
+          id: 'test-unit',
+          component: 'tools',
+          commandLine: 'npm test',
+          workingDir: '/projects/app',
+          group: 'test',
+        },
+      ]);
+    });
+
     it('should create session and execute devfile command', async () => {
       const res = await fetch(`${baseUrl}/api/sessions`, {
         method: 'POST',
@@ -471,8 +472,7 @@ describe('API Routes', { timeout: 30000 }, () => {
     });
 
     it('should use "task" prefix when no group specified', async () => {
-      const { loadDevfileCommands } = await import('../devfile-commands.js');
-      vi.mocked(loadDevfileCommands).mockReturnValueOnce([
+      vi.spyOn(devfileCommandsModule, 'loadDevfileCommands').mockReturnValueOnce([
         {
           id: 'custom-cmd',
           label: 'Custom Command',
