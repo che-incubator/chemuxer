@@ -215,10 +215,7 @@ describe('API Routes', { timeout: 30000 }, () => {
     });
     expect(res.status).toBe(200);
     expect((await res.json()).ok).toBe(true);
-    await new Promise(r => setTimeout(r, 500));
-    const bufferRes = await fetch(`${baseUrl}/api/sessions/${id}/buffer`);
-    const { content } = await bufferRes.json();
-    expect(content).toContain('agent-test');
+    expect(mockWrite).toHaveBeenCalledWith('echo agent-test\r');
   });
 
   it('POST /api/sessions/:id/input returns 404 for unknown ID', async () => {
