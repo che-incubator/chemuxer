@@ -16,7 +16,7 @@ describe('stdio entry point', () => {
     expect(typeof StdioServerTransport).toBe('function');
   });
 
-  it('createMcpServer registers all 7 tools and connects via transport', async () => {
+  it('createMcpServer registers all 8 tools and connects via transport', async () => {
     const store = {
       list: () => [],
       get: () => undefined,
@@ -39,6 +39,7 @@ describe('stdio entry point', () => {
       'create_terminal',
       'get_activity_feed',
       'get_terminal_output',
+      'list_devfile_commands',
       'list_terminals',
       'list_workspaces',
       'send_terminal_input',

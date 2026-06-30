@@ -1,4 +1,4 @@
-import type { SessionInfo, FeedResponse } from '@chemuxer/shared';
+import type { SessionInfo, FeedResponse, DevfileCommand } from '@chemuxer/shared';
 
 export interface ChemuxerClientOptions {
   timeoutMs?: number; // default 2000
@@ -43,6 +43,10 @@ export class ChemuxerClient {
       ? `${endpoint}/api/sessions/${encodeURIComponent(sessionId)}/feed${params}`
       : `${endpoint}/api/feed${params}`;
     return this.get<FeedResponse>(path);
+  }
+
+  async listDevfileCommands(endpoint: string): Promise<DevfileCommand[]> {
+    return this.get<DevfileCommand[]>(`${endpoint}/api/devfile-commands`);
   }
 
   private async get<T>(url: string): Promise<T> {
