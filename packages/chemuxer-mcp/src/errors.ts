@@ -5,7 +5,8 @@ export type ErrorCode =
   | 'WORKSPACE_IDLED'
   | 'TERMINAL_NOT_FOUND'
   | 'UPSTREAM_TIMEOUT'
-  | 'UPSTREAM_ERROR';
+  | 'UPSTREAM_ERROR'
+  | 'COMMAND_NOT_FOUND';
 
 export class ToolError extends Error {
   constructor(
