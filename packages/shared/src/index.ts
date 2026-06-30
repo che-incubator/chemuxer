@@ -24,3 +24,4 @@ export {
   mergeWithDefaults,
 } from './settings.js';
 export type { FeedEntry, FeedResponse } from './feed-types.js';
+export type { DevfileCommand } from './devfile-command.js';

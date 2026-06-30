@@ -13,6 +13,8 @@ import { registerCloseTerminal } from './tools/close-terminal.js';
 import { registerGetTerminalOutput } from './tools/get-terminal-output.js';
 import { registerSendTerminalInput } from './tools/send-terminal-input.js';
 import { registerGetActivityFeed } from './tools/get-activity-feed.js';
+import { registerListDevfileCommands } from './tools/list-devfile-commands.js';
+import { registerRunDevfileCommand } from './tools/run-devfile-command.js';
 
 function createMcpServer(store: WorkspaceStore, client: ChemuxerClient, resolver: EndpointResolver): McpServer {
   const server = new McpServer({ name: 'chemuxer-mcp', version: '0.1.0' });
@@ -23,6 +25,8 @@ function createMcpServer(store: WorkspaceStore, client: ChemuxerClient, resolver
   registerGetTerminalOutput(server, store, client, resolver);
   registerSendTerminalInput(server, store, client, resolver);
   registerGetActivityFeed(server, store, client, resolver);
+  registerListDevfileCommands(server, store, client, resolver);
+  registerRunDevfileCommand(server, store, client, resolver);
   return server;
 }
 
