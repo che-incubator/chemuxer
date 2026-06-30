@@ -146,6 +146,57 @@ export function createApiRouter(
   });
 
   router.post('/api/sessions', (req, res, next) => {
+    const { pinned, devfileCommandId } = req.body || {};
+
+    // Handle devfile command execution
+    if (devfileCommandId) {
+      try {
+        const devfileCommands = loadDevfileCommands();
+        const command = devfileCommands.find(cmd => cmd.id === devfileCommandId);
+
+        if (!command) {
+          return res.status(404).json({
+            error: `Devfile command not found: ${devfileCommandId}`,
+          });
+        }
+
+        // Create session
+        const session = manager.createSession();
+
+        // Generate title: group: label or task: label
+        const prefix = command.group || 'task';
+        const displayName = command.label || command.id;
+        const title = `${prefix}: ${displayName}`;
+        session.rename(title);
+
+        // Build command text with workingDir if present
+        let commandText: string;
+        if (command.workingDir) {
+          // Quote workingDir for shell safety (same pattern as chemuxer-mcp)
+          const quotedDir = command.workingDir.replace(/'/g, "'\\''");
+          commandText = `cd '${quotedDir}' && ${command.commandLine}\n`;
+        } else {
+          commandText = `${command.commandLine}\n`;
+        }
+
+        // Execute command in session
+        session.write(commandText);
+
+        // Handle pinning
+        if (pinned === true) {
+          manager.pinSession(session.id, true);
+        }
+
+        return res.status(201).json(session.toInfo());
+      } catch (err) {
+        if (err instanceof SessionLimitError) {
+          return res.status(429).json({ error: 'Maximum session limit reached' });
+        }
+        return next(err);
+      }
+    }
+
+    // Regular session creation (existing code path)
     let session;
     try {
       session = manager.createSession();
@@ -157,7 +208,7 @@ export function createApiRouter(
       next(err);
       return;
     }
-    if (req.body?.pinned === true) {
+    if (pinned === true) {
       manager.pinSession(session.id, true);
     }
     res.status(201).json(session.toInfo());

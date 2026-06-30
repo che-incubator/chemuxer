@@ -4,6 +4,7 @@ import { useControl } from './hooks/useControl.js';
 import { useLayout } from './hooks/useLayout.js';
 import { useSettings } from './hooks/useSettings.js';
 import { useCommands } from './hooks/useCommands.js';
+import { useDevfileCommands } from './hooks/useDevfileCommands.js';
 import { LayoutRenderer } from './components/LayoutRenderer.js';
 import { CommandPalette } from './components/CommandPalette.js';
 import { ConnectionBanner } from './components/ConnectionBanner.js';
@@ -25,6 +26,8 @@ export function App() {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [renamingSessionId, setRenamingSessionId] = useState<string | null>(null);
   const [pendingClose, setPendingClose] = useState<{ sessionId: string; title: string } | null>(null);
+
+  const { commands: devfileCommands, revalidateIfStale } = useDevfileCommands();
 
   const handleRenameRequest = useCallback((sessionId: string) => {
     setRenamingSessionId(sessionId);
@@ -89,7 +92,12 @@ export function App() {
 
   const handlePaletteOpenChange = useCallback((open: boolean) => {
     setPaletteOpen(open);
-  }, []);
+
+    if (open) {
+      // Revalidate devfile commands if cache is stale
+      revalidateIfStale();
+    }
+  }, [revalidateIfStale]);
 
   const handleRenameConfirm = useCallback((sessionId: string, title: string) => {
     control.renameSession(sessionId, title);
@@ -106,6 +114,29 @@ export function App() {
       layout.splitPane(focusedPaneId, sessionId, zone);
     }
   }, [layout.focusedPaneId, layout.splitPane]);
+
+  const handleRunDevfileCommand = useCallback(async (commandId: string) => {
+    try {
+      const response = await fetch(`${basePath()}/api/sessions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ devfileCommandId: commandId }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        console.error('Failed to run devfile command:', error);
+        // TODO: show error notification to user
+        return;
+      }
+
+      // Session creation is handled via WebSocket broadcast
+      // useLayout will automatically add the new session to a pane
+    } catch (err) {
+      console.error('Failed to run devfile command:', err);
+      // TODO: show error notification to user
+    }
+  }, []);
 
   return (
     <DragProvider>
@@ -142,6 +173,8 @@ export function App() {
           open={paletteOpen}
           onOpenChange={handlePaletteOpenChange}
           commands={commands}
+          devfileCommands={devfileCommands}
+          onRunDevfileCommand={handleRunDevfileCommand}
         />
         {pendingClose && (
           <PinConfirmModal
