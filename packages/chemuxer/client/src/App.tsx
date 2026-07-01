@@ -124,17 +124,14 @@ export function App() {
       });
 
       if (!response.ok) {
-        const error = await response.json();
+        const error = await response.json().catch(() => ({ error: response.statusText }));
         console.error('Failed to run devfile command:', error);
-        // TODO: show error notification to user
+        alert(`Failed to start command "${commandId}": ${error.error || response.statusText}`);
         return;
       }
-
-      // Session creation is handled via WebSocket broadcast
-      // useLayout will automatically add the new session to a pane
     } catch (err) {
       console.error('Failed to run devfile command:', err);
-      // TODO: show error notification to user
+      alert(`Failed to start command "${commandId}": ${err instanceof Error ? err.message : 'Unknown error'}`);
     }
   }, []);
 
