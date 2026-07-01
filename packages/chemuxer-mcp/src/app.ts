@@ -42,7 +42,7 @@ export interface AppHandle {
   shutdown(): Promise<void>;
 }
 
-const transports = new Map<string, StreamableHTTPServerTransport>();
+const MAX_BODY_BYTES = 1024 * 1024; // 1 MB
 
 function normalizeToolCallArguments(body: unknown): void {
   const messages = Array.isArray(body) ? body : [body];
@@ -64,7 +64,16 @@ function normalizeToolCallArguments(body: unknown): void {
 function readBody(req: http.IncomingMessage): Promise<string> {
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
-    req.on('data', (chunk: Buffer) => chunks.push(chunk));
+    let size = 0;
+    req.on('data', (chunk: Buffer) => {
+      size += chunk.length;
+      if (size > MAX_BODY_BYTES) {
+        req.destroy(new Error('Request body too large'));
+        reject(new Error('Request body too large'));
+        return;
+      }
+      chunks.push(chunk);
+    });
     req.on('end', () => resolve(Buffer.concat(chunks).toString()));
     req.on('error', reject);
   });
@@ -72,6 +81,7 @@ function readBody(req: http.IncomingMessage): Promise<string> {
 
 export function createApp(deps: AppDeps): AppHandle {
   const { store, client, resolver } = deps;
+  const transports = new Map<string, StreamableHTTPServerTransport>();
   let shuttingDown = false;
 
   const httpServer = http.createServer(async (req, res) => {
@@ -99,7 +109,15 @@ export function createApp(deps: AppDeps): AppHandle {
       }
 
       if (req.method === 'POST' || req.method === 'GET' || req.method === 'DELETE') {
-        await handleMcpRequest(req, res, deps);
+        try {
+          await handleMcpRequest(req, res, deps, transports);
+        } catch (err) {
+          console.error('[mcp] Unhandled error in /mcp handler:', err);
+          if (!res.headersSent) {
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ jsonrpc: '2.0', error: { code: -32603, message: 'Internal error' }, id: null }));
+          }
+        }
       } else {
         res.writeHead(405).end('Method Not Allowed');
       }
@@ -127,8 +145,6 @@ export function createApp(deps: AppDeps): AppHandle {
     await new Promise<void>((resolve) => {
       httpServer.close(() => resolve());
     });
-
-    await store.stop();
   }
 
   return { httpServer, start, shutdown };
@@ -138,6 +154,7 @@ async function handleMcpRequest(
   req: http.IncomingMessage,
   res: http.ServerResponse,
   deps: AppDeps,
+  transports: Map<string, StreamableHTTPServerTransport>,
 ): Promise<void> {
   const sessionId = req.headers['mcp-session-id'] as string | undefined;
 
