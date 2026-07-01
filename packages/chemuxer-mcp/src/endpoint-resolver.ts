@@ -114,13 +114,10 @@ export class PortForwardEndpointResolver implements EndpointResolver {
 }
 
 export function createEndpointResolver(
-  transport: 'stdio' | 'http',
+  _transport: 'stdio' | 'http',
   kc: k8s.KubeConfig,
   namespace: string,
   defaultPort: number,
 ): EndpointResolver {
-  if (transport === 'http') {
-    return new DirectEndpointResolver();
-  }
   return new PortForwardEndpointResolver(kc, namespace, defaultPort);
 }

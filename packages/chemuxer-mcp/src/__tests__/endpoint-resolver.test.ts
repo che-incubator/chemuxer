@@ -230,10 +230,16 @@ describe('PortForwardEndpointResolver', () => {
 });
 
 describe('createEndpointResolver', () => {
-  it('returns DirectEndpointResolver for http transport', () => {
+  it('returns PortForwardEndpointResolver for http transport', () => {
     const kc = new k8s.KubeConfig();
+    kc.loadFromOptions({
+      clusters: [{ name: 'c', server: 'https://api.example.com' }],
+      users: [{ name: 'u' }],
+      contexts: [{ name: 'ctx', cluster: 'c', user: 'u' }],
+      currentContext: 'ctx',
+    });
     const resolver = createEndpointResolver('http', kc, 'ns', 7681);
-    expect(resolver).toBeInstanceOf(DirectEndpointResolver);
+    expect(resolver).toBeInstanceOf(PortForwardEndpointResolver);
   });
 
   it('returns PortForwardEndpointResolver for stdio transport', () => {
