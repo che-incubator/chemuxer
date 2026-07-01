@@ -230,9 +230,9 @@ describe('PortForwardEndpointResolver', () => {
 });
 
 describe('createEndpointResolver', () => {
-  it('returns DirectEndpointResolver for sse transport', () => {
+  it('returns DirectEndpointResolver for http transport', () => {
     const kc = new k8s.KubeConfig();
-    const resolver = createEndpointResolver('sse', kc, 'ns', 7681);
+    const resolver = createEndpointResolver('http', kc, 'ns', 7681);
     expect(resolver).toBeInstanceOf(DirectEndpointResolver);
   });
 
