@@ -36,69 +36,84 @@ async function startApp(): Promise<{ endpoint: string; handle: AppHandle }> {
   return { endpoint: `http://127.0.0.1:${port}`, handle: h };
 }
 
-describe('SSE entry point', () => {
-  it('GET /sse opens an SSE connection', async () => {
+describe('Streamable HTTP entry point', () => {
+  it('POST /mcp with initialize request creates a session', async () => {
     const { endpoint } = await startApp();
 
-    const controller = new AbortController();
-    const res = await fetch(`${endpoint}/sse`, { signal: controller.signal });
+    const res = await fetch(`${endpoint}/mcp`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json, text/event-stream',
+      },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'initialize',
+        params: {
+          protocolVersion: '2024-11-05',
+          capabilities: {},
+          clientInfo: { name: 'test', version: '0.0.1' },
+        },
+      }),
+    });
 
     expect(res.status).toBe(200);
-    expect(res.headers.get('content-type')).toContain('text/event-stream');
-
-    // Abort to close the connection
-    controller.abort();
+    expect(res.headers.get('mcp-session-id')).toBeTruthy();
   });
 
-  it('POST /messages with unknown sessionId returns 404', async () => {
+  it('POST /mcp with unknown sessionId returns 404', async () => {
     const { endpoint } = await startApp();
 
-    const res = await fetch(`${endpoint}/messages?sessionId=nonexistent`, {
+    const res = await fetch(`${endpoint}/mcp`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({}),
+      headers: {
+        'Content-Type': 'application/json',
+        'mcp-session-id': 'nonexistent',
+      },
+      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/list', params: {} }),
     });
 
     expect(res.status).toBe(404);
     const body = await res.json();
-    expect(body).toEqual({ error: 'Session not found' });
+    expect(body.error.message).toContain('Session not found');
+  });
+
+  it('POST /mcp without sessionId and non-initialize returns 400', async () => {
+    const { endpoint } = await startApp();
+
+    const res = await fetch(`${endpoint}/mcp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/list', params: {} }),
+    });
+
+    expect(res.status).toBe(400);
   });
 
   it('shutdown closes active transports and stops accepting connections', async () => {
     const { endpoint, handle: h } = await startApp();
 
-    // Open an SSE connection
-    const controller = new AbortController();
-    const ssePromise = fetch(`${endpoint}/sse`, { signal: controller.signal }).catch(() => {});
-
-    // Give a moment for the SSE connection to establish
-    await new Promise((resolve) => setTimeout(resolve, 50));
-
-    // Abort the client-side connection so httpServer.close() can complete
-    controller.abort();
-    await ssePromise;
-
-    // Shutdown completes now that no connections are held open
     await h.shutdown();
     handle = undefined;
 
-    // Server should be closed — new connections fail
     await expect(fetch(`${endpoint}/healthz`)).rejects.toThrow();
   });
 
-  it('new SSE requests during shutdown get 503', async () => {
+  it('requests during shutdown get 503', async () => {
     const { endpoint, handle: h } = await startApp();
 
-    // Trigger shutdown but don't await it — we want to test the 503 behavior
     const shutdownPromise = h.shutdown();
-    handle = undefined; // Will be shut down
+    handle = undefined;
 
-    // Immediately try to connect — shuttingDown flag is already set
-    const res = await fetch(`${endpoint}/sse`).catch(() => null);
+    const res = await fetch(`${endpoint}/mcp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2024-11-05', capabilities: {}, clientInfo: { name: 'test', version: '0.0.1' } } }),
+    }).catch(() => null);
 
     await shutdownPromise;
 
-    // Either we got a 503 or the connection was refused (race condition)
     if (res) {
       expect(res.status).toBe(503);
     }

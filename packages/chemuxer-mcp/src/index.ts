@@ -21,7 +21,7 @@ const store = new WorkspaceStore(kc, namespace, config.chemuxerDefaultPort);
 const client = new ChemuxerClient({ timeoutMs: config.requestTimeoutMs });
 const resolver = createEndpointResolver(config.transport, kc, namespace, config.chemuxerDefaultPort);
 
-if (config.transport === 'sse') {
+if (config.transport === 'http') {
   const server = createApp({ store, client, resolver });
   try {
     await server.start(config.port, config.host);

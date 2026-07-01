@@ -1,6 +1,6 @@
 import * as z from 'zod/v4';
 
-const TransportSchema = z.enum(['stdio', 'sse']);
+const TransportSchema = z.enum(['stdio', 'http']);
 
 const ConfigSchema = z.object({
   transport: TransportSchema.default('stdio'),

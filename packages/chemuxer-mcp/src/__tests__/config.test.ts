@@ -72,9 +72,9 @@ describe('loadConfig', () => {
     });
 
     it('reads transport from CHEMUXER_MCP_TRANSPORT env var', () => {
-      process.env.CHEMUXER_MCP_TRANSPORT = 'sse';
+      process.env.CHEMUXER_MCP_TRANSPORT = 'http';
       const config = loadConfig();
-      expect(config.transport).toBe('sse');
+      expect(config.transport).toBe('http');
     });
 
     it('throws on invalid transport value', () => {
@@ -86,8 +86,8 @@ describe('loadConfig', () => {
   describe('CLI arg parsing', () => {
     it('--transport overrides env var', () => {
       process.env.CHEMUXER_MCP_TRANSPORT = 'stdio';
-      const config = loadConfig(['--transport', 'sse']);
-      expect(config.transport).toBe('sse');
+      const config = loadConfig(['--transport', 'http']);
+      expect(config.transport).toBe('http');
     });
 
     it('--port overrides PORT env var', () => {
