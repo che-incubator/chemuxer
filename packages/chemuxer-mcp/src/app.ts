@@ -1,11 +1,11 @@
-import express from 'express';
-import { createServer, type Server } from 'node:http';
+import http from 'node:http';
+import { randomUUID } from 'node:crypto';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
+import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
+import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
 import type { WorkspaceStore } from './workspace-store.js';
 import type { ChemuxerClient } from './chemuxer-client.js';
 import type { EndpointResolver } from './endpoint-resolver.js';
-import { createHealthRouter } from './health.js';
 import { registerListWorkspaces } from './tools/list-workspaces.js';
 import { registerListTerminals } from './tools/list-terminals.js';
 import { registerCreateTerminal } from './tools/create-terminal.js';
@@ -16,7 +16,7 @@ import { registerGetActivityFeed } from './tools/get-activity-feed.js';
 import { registerListDevfileCommands } from './tools/list-devfile-commands.js';
 import { registerRunDevfileCommand } from './tools/run-devfile-command.js';
 
-function createMcpServer(store: WorkspaceStore, client: ChemuxerClient, resolver: EndpointResolver): McpServer {
+export function createMcpServer(store: WorkspaceStore, client: ChemuxerClient, resolver: EndpointResolver): McpServer {
   const server = new McpServer({ name: 'chemuxer-mcp', version: '0.1.0' });
   registerListWorkspaces(server, store, resolver);
   registerListTerminals(server, store, client, resolver);
@@ -30,8 +30,6 @@ function createMcpServer(store: WorkspaceStore, client: ChemuxerClient, resolver
   return server;
 }
 
-export { createMcpServer };
-
 export interface AppDeps {
   store: WorkspaceStore;
   client: ChemuxerClient;
@@ -39,72 +37,76 @@ export interface AppDeps {
 }
 
 export interface AppHandle {
-  app: express.Express;
-  httpServer: Server;
+  httpServer: http.Server;
   start(port: number, host: string): Promise<void>;
   shutdown(): Promise<void>;
 }
 
+const transports = new Map<string, StreamableHTTPServerTransport>();
+
+function normalizeToolCallArguments(body: unknown): void {
+  const messages = Array.isArray(body) ? body : [body];
+  for (const msg of messages) {
+    if (
+      msg &&
+      typeof msg === 'object' &&
+      'method' in msg &&
+      (msg as Record<string, unknown>).method === 'tools/call' &&
+      'params' in msg &&
+      (msg as Record<string, unknown>).params &&
+      ((msg as Record<string, unknown>).params as Record<string, unknown>).arguments === null
+    ) {
+      ((msg as Record<string, unknown>).params as Record<string, unknown>).arguments = {};
+    }
+  }
+}
+
+function readBody(req: http.IncomingMessage): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    req.on('data', (chunk: Buffer) => chunks.push(chunk));
+    req.on('end', () => resolve(Buffer.concat(chunks).toString()));
+    req.on('error', reject);
+  });
+}
+
 export function createApp(deps: AppDeps): AppHandle {
   const { store, client, resolver } = deps;
-  const app = express();
-  const httpServer = createServer(app);
-
-  app.use(createHealthRouter(store));
-
-  const sessions = new Map<string, { transport: SSEServerTransport; mcpServer: McpServer }>();
   let shuttingDown = false;
 
-  app.get('/sse', async (req, res) => {
-    if (shuttingDown) {
-      res.status(503).json({ error: 'Server is shutting down' });
+  const httpServer = http.createServer(async (req, res) => {
+    const url = new URL(req.url ?? '/', `http://${req.headers.host}`);
+
+    if (url.pathname === '/healthz' && req.method === 'GET') {
+      const synced = store.synced;
+      res.writeHead(synced ? 200 : 503, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ status: synced ? 'ok' : 'starting', synced }));
       return;
     }
 
-    let transport: SSEServerTransport | undefined;
-    let mcpServer: McpServer | undefined;
-    try {
-      transport = new SSEServerTransport('/messages', res);
-      mcpServer = createMcpServer(store, client, resolver);
-      await mcpServer.connect(transport);
-      sessions.set(transport.sessionId, { transport, mcpServer });
-
-      res.on('close', async () => {
-        const session = sessions.get(transport!.sessionId);
-        if (session) {
-          try { await session.mcpServer.close(); } catch { /* ignore */ }
-        }
-        sessions.delete(transport!.sessionId);
-      });
-    } catch (err) {
-      console.error('[app] SSE connection error:', err);
-      if (mcpServer) {
-        try { await mcpServer.close(); } catch { /* ignore */ }
-      }
-      if (transport) {
-        try { await transport.close(); } catch { /* ignore */ }
-      }
-      if (!res.headersSent) {
-        res.status(500).json({ error: 'Failed to establish SSE connection' });
-      }
-    }
-  });
-
-  app.post('/messages', express.json({ limit: '1mb' }), async (req, res) => {
-    if (shuttingDown) {
-      res.status(503).json({ error: 'Server is shutting down' });
+    if (url.pathname === '/readyz' && req.method === 'GET') {
+      const synced = store.synced;
+      res.writeHead(synced ? 200 : 503, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ready: synced }));
       return;
     }
 
-    const sessionId = req.query.sessionId as string | undefined;
-    const session = sessionId ? sessions.get(sessionId) : undefined;
+    if (url.pathname === '/mcp') {
+      if (shuttingDown) {
+        res.writeHead(503, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ jsonrpc: '2.0', error: { code: -32000, message: 'Server is shutting down' }, id: null }));
+        return;
+      }
 
-    if (!session) {
-      res.status(404).json({ error: 'Session not found' });
+      if (req.method === 'POST' || req.method === 'GET' || req.method === 'DELETE') {
+        await handleMcpRequest(req, res, deps);
+      } else {
+        res.writeHead(405).end('Method Not Allowed');
+      }
       return;
     }
 
-    await session.transport.handlePostMessage(req, res);
+    res.writeHead(404).end('Not Found');
   });
 
   async function start(port: number, host: string): Promise<void> {
@@ -117,22 +119,75 @@ export function createApp(deps: AppDeps): AppHandle {
   async function shutdown(): Promise<void> {
     shuttingDown = true;
 
-    // Close all active MCP servers and transports
-    const closeTasks = Array.from(sessions.values()).flatMap((s) => [
-      s.mcpServer.close(),
-      s.transport.close(),
-    ]);
-    await Promise.allSettled(closeTasks);
-    sessions.clear();
+    for (const [sid, transport] of transports) {
+      await transport.close();
+      transports.delete(sid);
+    }
 
-    // Now stop accepting new connections (completes immediately since SSE responses are closed)
     await new Promise<void>((resolve) => {
       httpServer.close(() => resolve());
     });
 
-    // Stop the workspace store
     await store.stop();
   }
 
-  return { app, httpServer, start, shutdown };
+  return { httpServer, start, shutdown };
+}
+
+async function handleMcpRequest(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+  deps: AppDeps,
+): Promise<void> {
+  const sessionId = req.headers['mcp-session-id'] as string | undefined;
+
+  let parsedBody: unknown;
+  if (req.method === 'POST') {
+    const body = await readBody(req);
+    try {
+      parsedBody = JSON.parse(body);
+    } catch {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ jsonrpc: '2.0', error: { code: -32700, message: 'Parse error' }, id: null }));
+      return;
+    }
+    normalizeToolCallArguments(parsedBody);
+  }
+
+  if (sessionId && transports.has(sessionId)) {
+    const transport = transports.get(sessionId)!;
+    await transport.handleRequest(req, res, parsedBody);
+    return;
+  }
+
+  if (req.method === 'POST') {
+    if (!sessionId && isInitializeRequest(parsedBody)) {
+      const transport = new StreamableHTTPServerTransport({
+        sessionIdGenerator: () => randomUUID(),
+        onsessioninitialized: (sid) => {
+          transports.set(sid, transport);
+        },
+      });
+
+      transport.onclose = () => {
+        const sid = transport.sessionId;
+        if (sid) transports.delete(sid);
+      };
+
+      const { store, client, resolver } = deps;
+      const mcpServer = createMcpServer(store, client, resolver);
+      await mcpServer.connect(transport);
+      await transport.handleRequest(req, res, parsedBody);
+      return;
+    }
+  }
+
+  if (sessionId) {
+    res.writeHead(404, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ jsonrpc: '2.0', error: { code: -32000, message: 'Session not found. Please re-initialize.' }, id: null }));
+    return;
+  }
+
+  res.writeHead(400, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify({ jsonrpc: '2.0', error: { code: -32000, message: 'Bad Request: No valid session ID provided' }, id: null }));
 }
