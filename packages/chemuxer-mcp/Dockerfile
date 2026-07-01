@@ -23,7 +23,10 @@ COPY --from=build /app/packages/chemuxer-mcp/dist/ packages/chemuxer-mcp/dist/
 RUN npm ci --omit=dev
 
 USER 0
-RUN useradd -r -m -d /home/mcpuser mcpuser && chown -R mcpuser:mcpuser /app
+RUN microdnf install -y shadow-utils && \
+    useradd -r -m -d /home/mcpuser mcpuser && \
+    chown -R mcpuser:mcpuser /app && \
+    microdnf remove -y shadow-utils && microdnf clean all
 USER mcpuser
 
 ENV NODE_ENV=production

@@ -115,7 +115,7 @@ export function CommandPalette({
         ))}
 
         {/* Devfile command groups */}
-        {devfileCommands.length > 0 && (
+        {!isSubLevel && devfileCommands.length > 0 && (
           <>
             {/* Render known groups in fixed order */}
             {GROUP_ORDER.map((groupKey) => {

@@ -28,7 +28,10 @@ WORKDIR /app
 COPY --from=build /pty/node_modules/node-pty node_modules/node-pty
 
 USER 0
-RUN useradd -r -m -d /home/chemuxer chemuxer && chown -R chemuxer:chemuxer /app
+RUN microdnf install -y shadow-utils && \
+    useradd -r -m -d /home/chemuxer chemuxer && \
+    chown -R chemuxer:chemuxer /app && \
+    microdnf remove -y shadow-utils && microdnf clean all
 
 COPY --from=build --chown=chemuxer:chemuxer /app/packages/chemuxer/dist/server/server.js dist/server/server.js
 COPY --from=build --chown=chemuxer:chemuxer /app/packages/chemuxer/dist/client dist/client

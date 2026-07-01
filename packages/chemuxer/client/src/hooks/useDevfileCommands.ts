@@ -16,8 +16,12 @@ export function useDevfileCommands(): UseDevfileCommandsResult {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const fetchedAtRef = useRef<number>(0);
+  const inFlightRef = useRef<boolean>(false);
 
   const fetchCommands = useCallback(async () => {
+    if (inFlightRef.current) return;
+    inFlightRef.current = true;
+    fetchedAtRef.current = Date.now();
     setLoading(true);
     setError(null);
 
@@ -29,7 +33,7 @@ export function useDevfileCommands(): UseDevfileCommandsResult {
       }
 
       const data = await response.json();
-      setCommands(data);
+      setCommands(Array.isArray(data) ? data : []);
       fetchedAtRef.current = Date.now();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown error';
@@ -37,6 +41,7 @@ export function useDevfileCommands(): UseDevfileCommandsResult {
       setCommands([]);
     } finally {
       setLoading(false);
+      inFlightRef.current = false;
     }
   }, []);
 
