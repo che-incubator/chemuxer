@@ -89,10 +89,19 @@ The service account needs these permissions in the target namespace:
 Prerequisites: a Kubernetes namespace with DevWorkspace pods running Chemuxer.
 
 ```bash
-kubectl apply -f deploy/ -n <namespace>
+# Base deployment (ClusterIP only, auth enabled)
+kubectl apply -k deploy/base/ -n <namespace>
+
+# With OpenShift Route (external access via HTTPS)
+kubectl apply -k deploy/overlays/openshift/ -n <namespace>
+
+# With vanilla K8s Ingress (external access)
+kubectl apply -k deploy/overlays/ingress/ -n <namespace>
 ```
 
 Image: `quay.io/che-incubator/chemuxer-mcp:next`
+
+The base manifests create a Deployment, ServiceAccount, Service (ClusterIP on port 3001), and ClusterRole for auth (tokenreviews/subjectaccessreviews). Overlays add external access via Route or Ingress.
 
 ## Configuration
 
@@ -106,6 +115,25 @@ Runtime tuning via environment variables (set in `deploy/configmap.yaml`):
 | `CHEMUXER_DEFAULT_PORT` | 7681 | Default Chemuxer port on workspace pods |
 | `REQUEST_TIMEOUT_MS` | 2000 | HTTP timeout for upstream Chemuxer calls |
 | `CHEMUXER_MCP_TRANSPORT` | stdio | Transport mode: `stdio` or `http` |
+| `CHEMUXER_MCP_AUTH_ENABLED` | false | Enable K8s bearer token authentication (HTTP mode only) |
+
+## Authentication
+
+When deployed on-cluster with HTTP transport, the server can validate `Authorization: Bearer <token>` headers via the K8s TokenReview API. Auth is **disabled by default** — set `CHEMUXER_MCP_AUTH_ENABLED=true` to enable.
+
+```bash
+# Get a token
+TOKEN=$(oc whoami -t)                                        # OpenShift
+TOKEN=$(kubectl create token chemuxer-mcp --duration=2h)     # vanilla K8s
+
+# Claude Code — with auth header
+claude mcp add --transport http \
+  --header "Authorization: Bearer $TOKEN" \
+  chemuxer http://<route-hostname>/mcp
+```
+
+- `GET /healthz` and `GET /readyz` bypass auth — K8s probes work without tokens
+- If the K8s API is unreachable, auth returns 503 (fail closed)
 
 ## Development
 
