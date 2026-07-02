@@ -22,7 +22,27 @@ const client = new ChemuxerClient({ timeoutMs: config.requestTimeoutMs });
 const resolver = createEndpointResolver(config.transport, kc, namespace, config.chemuxerDefaultPort);
 
 if (config.transport === 'http') {
-  const server = createApp({ store, client, resolver });
+  let authMiddleware: ((req: import('http').IncomingMessage, res: import('http').ServerResponse, next: () => Promise<void>) => Promise<void>) | undefined;
+
+  if (config.authEnabled) {
+    if (!namespace) {
+      console.error('[chemuxer-mcp] Fatal: NAMESPACE is required when auth is enabled. Set NAMESPACE or set CHEMUXER_MCP_AUTH_ENABLED=false.');
+      process.exit(1);
+    }
+    const { rawHttpK8sAuth, createDefaultK8sClient } = await import('@che-incubator/k8s-mcp-auth');
+    const k8sClient = createDefaultK8sClient();
+    authMiddleware = rawHttpK8sAuth({
+      publicPaths: [
+        { method: 'GET', path: '/healthz' },
+        { method: 'GET', path: '/readyz' },
+      ],
+      namespace,
+      k8sClient,
+    });
+    console.log('[chemuxer-mcp] K8s token authentication enabled');
+  }
+
+  const server = createApp({ store, client, resolver, authMiddleware });
   try {
     await server.start(config.port, config.host);
   } catch (err) {

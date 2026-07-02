@@ -12,6 +12,7 @@ describe('loadConfig', () => {
     delete process.env.CHEMUXER_DEFAULT_PORT;
     delete process.env.REQUEST_TIMEOUT_MS;
     delete process.env.CHEMUXER_MCP_TRANSPORT;
+    delete process.env.CHEMUXER_MCP_AUTH_ENABLED;
   });
 
   afterEach(() => {
@@ -34,6 +35,7 @@ describe('loadConfig', () => {
       namespace: undefined,
       chemuxerDefaultPort: 7681,
       requestTimeoutMs: 2000,
+      authEnabled: false,
     });
   });
 
@@ -52,6 +54,7 @@ describe('loadConfig', () => {
       namespace: 'test-ns',
       chemuxerDefaultPort: 9999,
       requestTimeoutMs: 5000,
+      authEnabled: false,
     });
   });
 
@@ -80,6 +83,25 @@ describe('loadConfig', () => {
     it('throws on invalid transport value', () => {
       process.env.CHEMUXER_MCP_TRANSPORT = 'websocket';
       expect(() => loadConfig()).toThrow();
+    });
+  });
+
+  describe('auth config', () => {
+    it('defaults authEnabled to false', () => {
+      const config = loadConfig();
+      expect(config.authEnabled).toBe(false);
+    });
+
+    it('reads CHEMUXER_MCP_AUTH_ENABLED=true', () => {
+      process.env.CHEMUXER_MCP_AUTH_ENABLED = 'true';
+      const config = loadConfig();
+      expect(config.authEnabled).toBe(true);
+    });
+
+    it('reads CHEMUXER_MCP_AUTH_ENABLED=false explicitly', () => {
+      process.env.CHEMUXER_MCP_AUTH_ENABLED = 'false';
+      const config = loadConfig();
+      expect(config.authEnabled).toBe(false);
     });
   });
 

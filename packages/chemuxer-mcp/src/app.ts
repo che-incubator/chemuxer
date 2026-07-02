@@ -30,10 +30,17 @@ export function createMcpServer(store: WorkspaceStore, client: ChemuxerClient, r
   return server;
 }
 
+type AuthMiddleware = (
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+  next: () => Promise<void>,
+) => Promise<void>;
+
 export interface AppDeps {
   store: WorkspaceStore;
   client: ChemuxerClient;
   resolver: EndpointResolver;
+  authMiddleware?: AuthMiddleware;
 }
 
 export interface AppHandle {
@@ -80,11 +87,11 @@ function readBody(req: http.IncomingMessage): Promise<string> {
 }
 
 export function createApp(deps: AppDeps): AppHandle {
-  const { store, client, resolver } = deps;
+  const { store, client, resolver, authMiddleware } = deps;
   const transports = new Map<string, StreamableHTTPServerTransport>();
   let shuttingDown = false;
 
-  const httpServer = http.createServer(async (req, res) => {
+  async function handleRouting(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
     const url = new URL(req.url ?? '/', `http://${req.headers.host}`);
 
     if (url.pathname === '/healthz' && req.method === 'GET') {
@@ -125,6 +132,16 @@ export function createApp(deps: AppDeps): AppHandle {
     }
 
     res.writeHead(404).end('Not Found');
+  }
+
+  const httpServer = http.createServer(async (req, res) => {
+    if (authMiddleware) {
+      await authMiddleware(req, res, async () => {
+        await handleRouting(req, res);
+      });
+    } else {
+      await handleRouting(req, res);
+    }
   });
 
   async function start(port: number, host: string): Promise<void> {

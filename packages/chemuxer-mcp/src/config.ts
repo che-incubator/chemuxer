@@ -9,6 +9,10 @@ const ConfigSchema = z.object({
   namespace: z.string().optional(),
   chemuxerDefaultPort: z.coerce.number().int().min(1).max(65535).default(7681),
   requestTimeoutMs: z.coerce.number().int().min(0).default(2000),
+  authEnabled: z.preprocess(
+    (v) => typeof v === 'string' ? v.toLowerCase() === 'true' : v,
+    z.boolean().default(false),
+  ),
 });
 
 export type Config = z.infer<typeof ConfigSchema>;
@@ -27,6 +31,7 @@ export function loadConfig(argv: string[] = []): Readonly<Config> {
     namespace: getArgValue(argv, '--namespace') ?? process.env.NAMESPACE,
     chemuxerDefaultPort: process.env.CHEMUXER_DEFAULT_PORT,
     requestTimeoutMs: process.env.REQUEST_TIMEOUT_MS,
+    authEnabled: process.env.CHEMUXER_MCP_AUTH_ENABLED,
   });
 
   return Object.freeze(result);
