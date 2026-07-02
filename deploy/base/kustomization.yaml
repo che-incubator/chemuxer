@@ -1,0 +1,12 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - serviceaccount.yaml
+  - clusterrole.yaml
+  - deployment.yaml
+  - service.yaml
+
+images:
+  - name: quay.io/che-incubator/chemuxer-mcp
+    newName: quay.io/che-incubator/chemuxer-mcp
+    newTag: next

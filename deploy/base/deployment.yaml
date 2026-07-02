@@ -26,7 +26,13 @@ spec:
             - name: NODE_ENV
               value: "production"
             - name: CHEMUXER_MCP_TRANSPORT
-              value: "sse"
+              value: "http"
+            - name: CHEMUXER_MCP_AUTH_ENABLED
+              value: "true"
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
           securityContext:
             allowPrivilegeEscalation: false
             runAsNonRoot: true
