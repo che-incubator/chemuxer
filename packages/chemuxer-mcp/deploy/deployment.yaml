@@ -18,7 +18,7 @@ spec:
           image: quay.io/che-incubator/chemuxer-mcp:next
           ports:
             - containerPort: 3001
-              name: sse
+              name: http
           envFrom:
             - configMapRef:
                 name: chemuxer-mcp-config
