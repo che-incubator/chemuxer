@@ -3,5 +3,6 @@ kind: ConfigMap
 metadata:
   name: chemuxer-mcp-config
 data:
+  CHEMUXER_MCP_TRANSPORT: "http"
   CHEMUXER_DEFAULT_PORT: "7681"
   REQUEST_TIMEOUT_MS: "2000"

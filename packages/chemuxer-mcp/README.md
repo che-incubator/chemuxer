@@ -4,7 +4,45 @@ Namespace-level MCP server for AI agent oversight of Chemuxer terminal sessions 
 
 ## How it works
 
-A Kubernetes Informer watches DevWorkspace-labeled pods in the user's namespace, discovers running Chemuxer instances, and proxies requests to their REST APIs. The server exposes 7 MCP tools via stdio (local) or SSE (on-cluster) transport, giving an external agent a single endpoint to manage terminals across multiple workspaces.
+A Kubernetes Informer watches DevWorkspace-labeled pods in the user's namespace, discovers running Chemuxer instances, and proxies requests to their REST APIs via K8s PortForward. The server exposes 9 MCP tools via stdio (local) or Streamable HTTP (on-cluster) transport, giving an external agent a single endpoint to manage terminals across multiple workspaces.
+
+## Quick start (on-cluster)
+
+### 1. Deploy
+
+```bash
+kubectl apply -f deploy/ -n <your-namespace>
+```
+
+This creates a Deployment, ServiceAccount, Role (pods + pods/portforward), RoleBinding, ConfigMap, and ClusterIP Service on port 3001.
+
+### 2. Port-forward
+
+```bash
+kubectl port-forward svc/chemuxer-mcp 3001:3001 -n <your-namespace>
+```
+
+### 3. Connect Claude Code
+
+Add to `~/.claude/settings.json`:
+
+```json
+{
+  "mcpServers": {
+    "chemuxer-mcp": {
+      "type": "http",
+      "url": "http://localhost:3001/mcp"
+    }
+  }
+}
+```
+
+### 4. Verify
+
+```bash
+claude /mcp
+# Should show: Connected to chemuxer-mcp
+```
 
 ## Local development (stdio)
 
@@ -21,28 +59,7 @@ claude mcp add chemuxer-mcp -- node packages/chemuxer-mcp/dist/index.js --namesp
 NAMESPACE=my-namespace node packages/chemuxer-mcp/dist/index.js
 ```
 
-Requires `pods/proxy` RBAC permission in the target namespace.
-
-## On-cluster (SSE)
-
-Port-forward the MCP service to your laptop:
-
-```bash
-kubectl port-forward svc/chemuxer-mcp 3001:3001 -n <your-namespace>
-```
-
-Then add to your Claude Code MCP settings (`~/.claude/settings.json`):
-
-```json
-{
-  "mcpServers": {
-    "chemuxer": {
-      "type": "sse",
-      "url": "http://localhost:3001/sse"
-    }
-  }
-}
-```
+Uses kubeconfig for auth. Connects to workspace pods via K8s PortForward API.
 
 ## Tools
 
@@ -55,31 +72,40 @@ Then add to your Claude Code MCP settings (`~/.claude/settings.json`):
 | `create_terminal` | Create a new terminal session | `workspace` |
 | `close_terminal` | Close a terminal session | `workspace`, `session_id` |
 | `get_activity_feed` | Get recent terminal activity (single or cross-workspace) | `workspace` (optional), `since`, `limit` |
+| `list_devfile_commands` | List exec commands from the workspace devfile | `workspace` |
+| `run_devfile_command` | Run a devfile command in a new terminal session | `workspace`, `command_id` |
+
+## RBAC requirements
+
+The service account needs these permissions in the target namespace:
+
+| Resource | Verbs | Why |
+|----------|-------|-----|
+| `pods` | get, list, watch | Discover workspace pods via Informer |
+| `pods/portforward` | get, create | Reach Chemuxer inside workspace pods via K8s API |
 
 ## Deploy
 
 Prerequisites: a Kubernetes namespace with DevWorkspace pods running Chemuxer.
 
 ```bash
-kubectl apply -f deploy/ -n <your-namespace>
+kubectl apply -f deploy/ -n <namespace>
 ```
 
 Image: `quay.io/che-incubator/chemuxer-mcp:next`
 
-The manifests create a Deployment, ServiceAccount with namespace-scoped pod read RBAC, ConfigMap, and ClusterIP Service.
-
 ## Configuration
 
-Runtime tuning via environment variables (no image rebuild needed):
+Runtime tuning via environment variables (set in `deploy/configmap.yaml`):
 
 | Env Var | Default | Description |
 |---------|---------|-------------|
-| `PORT` | 3001 | HTTP/SSE server port |
+| `PORT` | 3001 | HTTP server port |
 | `HOST` | 0.0.0.0 | Bind address |
 | `NAMESPACE` | (auto) | K8s namespace override (auto-detected from service account) |
 | `CHEMUXER_DEFAULT_PORT` | 7681 | Default Chemuxer port on workspace pods |
 | `REQUEST_TIMEOUT_MS` | 2000 | HTTP timeout for upstream Chemuxer calls |
-| `CHEMUXER_MCP_TRANSPORT` | stdio | Transport mode: `stdio` or `sse` |
+| `CHEMUXER_MCP_TRANSPORT` | stdio | Transport mode: `stdio` or `http` |
 
 ## Development
 
@@ -89,14 +115,4 @@ npm install
 npm run build -w packages/shared
 npm test -w packages/chemuxer-mcp
 npm run build -w packages/chemuxer-mcp
-```
-
-To run locally outside a K8s cluster (stdio mode, default):
-
-```bash
-# Uses kubeconfig for auth, connects via K8s API pod proxy
-node packages/chemuxer-mcp/dist/index.js --namespace my-namespace
-
-# Or with env var
-NAMESPACE=my-namespace npm start -w packages/chemuxer-mcp
 ```

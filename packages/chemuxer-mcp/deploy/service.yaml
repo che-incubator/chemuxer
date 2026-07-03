@@ -9,4 +9,4 @@ spec:
   ports:
     - port: 3001
       targetPort: sse
-      name: sse
+      name: http
