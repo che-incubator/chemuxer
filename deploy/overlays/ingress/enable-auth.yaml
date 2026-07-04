@@ -1,0 +1,12 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chemuxer-mcp
+spec:
+  template:
+    spec:
+      containers:
+        - name: chemuxer-mcp
+          env:
+            - name: CHEMUXER_MCP_AUTH_ENABLED
+              value: "true"

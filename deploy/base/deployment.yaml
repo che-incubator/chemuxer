@@ -28,7 +28,7 @@ spec:
             - name: CHEMUXER_MCP_TRANSPORT
               value: "http"
             - name: CHEMUXER_MCP_AUTH_ENABLED
-              value: "true"
+              value: "false"
             - name: NAMESPACE
               valueFrom:
                 fieldRef:
