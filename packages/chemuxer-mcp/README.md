@@ -6,6 +6,27 @@ Namespace-level MCP server for AI agent oversight of Chemuxer terminal sessions 
 
 A Kubernetes Informer watches DevWorkspace-labeled pods in the user's namespace, discovers running Chemuxer instances, and proxies requests to their REST APIs via K8s PortForward. The server exposes 9 MCP tools via stdio (local) or Streamable HTTP (on-cluster) transport, giving an external agent a single endpoint to manage terminals across multiple workspaces.
 
+## Quick start (local — connecting to a remote cluster)
+
+Connect to the in-cluster chemuxer-mcp from your local machine. The stdio bridge manages `oc port-forward` internally. Requires `oc login` to the target cluster.
+
+```bash
+# Via npx (no install needed)
+claude mcp add chemuxer-mcp -- npx --package chemuxer-mcp chemuxer-mcp-bridge
+
+# Or install globally
+npm install -g chemuxer-mcp
+claude mcp add chemuxer-mcp -- chemuxer-mcp-bridge
+```
+
+Configuration via environment variables:
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `MCP_NAMESPACE` | Kubernetes namespace | Current `oc project` |
+| `MCP_SERVICE` | Service name | `chemuxer-mcp` |
+| `MCP_PORT` | Service port | `3001` |
+
 ## Quick start (on-cluster)
 
 ### 1. Deploy
@@ -43,21 +64,6 @@ Add to `~/.claude/settings.json`:
 claude /mcp
 # Should show: Connected to chemuxer-mcp
 ```
-
-### Alternative: K8s API proxy (no port-forward)
-
-Access the MCP server without port-forwarding. The K8s API server authenticates requests using your kubeconfig credentials:
-
-```bash
-API_SERVER=$(kubectl config view --minify -o jsonpath='{.clusters[0].cluster.server}')
-NAMESPACE=<your-namespace>
-
-claude mcp add --transport http \
-  --header "Authorization: Bearer $(oc whoami -t)" \
-  chemuxer-mcp "$API_SERVER/api/v1/namespaces/$NAMESPACE/services/chemuxer-mcp:3001/proxy/mcp"
-```
-
-No ClusterRole or Route required — the API server handles authentication and proxies to the ClusterIP service. The caller needs `services/proxy` RBAC permission in the target namespace.
 
 ## Local development (stdio)
 
