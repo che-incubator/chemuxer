@@ -3,8 +3,6 @@
   "version": "0.0.1",
   "description": "Stdio MCP bridge for connecting to an in-cluster chemuxer-mcp server",
   "type": "module",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
   "bin": {
     "chemuxer-mcp-bridge": "stdio-bridge.cjs"
   },

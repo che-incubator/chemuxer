@@ -191,9 +191,17 @@ async function main() {
       process.stderr.write('[bridge] invalid JSON: ' + e.message + '\n');
       return;
     }
-    var response = await forwardRequest(message);
-    if (response && response.trim()) {
-      process.stdout.write(response + '\n');
+    try {
+      var response = await forwardRequest(message);
+      if (response && response.trim()) {
+        process.stdout.write(response + '\n');
+      }
+    } catch (e) {
+      process.stderr.write('[bridge] forward error: ' + e.message + '\n');
+      if (message.id != null) {
+        var errResponse = JSON.stringify({ jsonrpc: '2.0', id: message.id, error: { code: -32000, message: e.message } });
+        process.stdout.write(errResponse + '\n');
+      }
     }
   }
 
