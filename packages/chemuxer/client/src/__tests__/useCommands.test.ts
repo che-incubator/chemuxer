@@ -28,7 +28,7 @@ function mockDeps(overrides: Partial<CommandDeps> = {}): CommandDeps {
 describe('useCommands', () => {
   it('returns 8 commands', () => {
     const commands = useCommands(mockDeps(), DEFAULT_SETTINGS, vi.fn());
-    expect(commands).toHaveLength(9);
+    expect(commands).toHaveLength(10);
   });
 
   it('returns commands with correct labels', () => {
@@ -76,7 +76,7 @@ describe('useCommands', () => {
 
   it('returns 8 commands including Select Color Theme', () => {
     const commands = useCommands(mockDeps(), DEFAULT_SETTINGS, vi.fn());
-    expect(commands).toHaveLength(9);
+    expect(commands).toHaveLength(10);
     const labels = commands.map((c) => c.label);
     expect(labels).toContain('Select Color Theme');
   });
@@ -222,5 +222,45 @@ describe('useCommands', () => {
     expect(cmd).toBeDefined();
     cmd.action!();
     expect(deps.toggleZoom).toHaveBeenCalled();
+  });
+
+  it('toggle-dim-inactive label shows Disable when dimInactivePanes is true', () => {
+    const settings = { ...DEFAULT_SETTINGS, terminal: { ...DEFAULT_SETTINGS.terminal, dimInactivePanes: true } };
+    const commands = useCommands(mockDeps(), settings, vi.fn());
+    const cmd = commands.find((c) => c.id === 'toggle-dim-inactive')!;
+    expect(cmd).toBeDefined();
+    expect(cmd.label).toBe('Disable Inactive Pane Dimming');
+  });
+
+  it('toggle-dim-inactive label shows Enable when dimInactivePanes is false', () => {
+    const settings = { ...DEFAULT_SETTINGS, terminal: { ...DEFAULT_SETTINGS.terminal, dimInactivePanes: false } };
+    const commands = useCommands(mockDeps(), settings, vi.fn());
+    const cmd = commands.find((c) => c.id === 'toggle-dim-inactive')!;
+    expect(cmd).toBeDefined();
+    expect(cmd.label).toBe('Enable Inactive Pane Dimming');
+  });
+
+  it('toggle-dim-inactive action calls updateSettings with toggled dimInactivePanes', () => {
+    const updateSettings = vi.fn().mockResolvedValue(undefined);
+    const settings = { ...DEFAULT_SETTINGS, terminal: { ...DEFAULT_SETTINGS.terminal, dimInactivePanes: true } };
+    const commands = useCommands(mockDeps(), settings, updateSettings);
+    const cmd = commands.find((c) => c.id === 'toggle-dim-inactive')!;
+    cmd.action!();
+    expect(updateSettings).toHaveBeenCalledWith({
+      ...settings,
+      terminal: { ...settings.terminal, dimInactivePanes: false },
+    });
+  });
+
+  it('toggle-dim-inactive action catches rejection with console.warn', async () => {
+    const error = new Error('network error');
+    const updateSettings = vi.fn().mockRejectedValue(error);
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const commands = useCommands(mockDeps(), DEFAULT_SETTINGS, updateSettings);
+    const cmd = commands.find((c) => c.id === 'toggle-dim-inactive')!;
+    cmd.action!();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(warnSpy).toHaveBeenCalledWith(error);
+    warnSpy.mockRestore();
   });
 });
