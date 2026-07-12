@@ -21,12 +21,16 @@ export function registerSendTerminalInput(
         workspace: z.string().describe('DevWorkspace name'),
         session_id: sessionIdSchema,
         input: z.string().describe(
-          'Text to send (include \\n for Enter). Supports escape sequences: ' +
-          '\\n (newline), \\r (carriage return/Enter for TUI), \\t (tab), ' +
-          '\\e (ESC for ANSI sequences), \\\\ (literal backslash), ' +
-          '\\xNN (hex byte), \\cX (Ctrl+X). ' +
-          'Examples: \\e[B for down arrow, \\e[A for up arrow, \\r to confirm, ' +
-          '\\cC for Ctrl+C, \\cD for Ctrl+D.',
+          'Text to send. Supports escape sequences for control characters. ' +
+          'For shell commands, end with \\n. For TUI/interactive prompts, use \\r for Enter. ' +
+          'Escapes: \\n (newline/LF), \\r (carriage return/CR), \\t (tab), ' +
+          '\\e (ESC), \\\\ (literal backslash), \\xNN (hex byte), \\cX (Ctrl+X). ' +
+          'Arrow keys: \\e[A (up), \\e[B (down), \\e[C (right), \\e[D (left). ' +
+          'Ctrl combos: \\cC (Ctrl+C/interrupt), \\cD (Ctrl+D/EOF), ' +
+          '\\cZ (Ctrl+Z/suspend), \\cL (Ctrl+L/clear), \\cW (Ctrl+W/delete word). ' +
+          'Function keys: \\eOP (F1), \\eOQ (F2), \\eOR (F3), \\eOS (F4). ' +
+          'Other: \\e[H (Home), \\e[F (End), \\e[5~ (PageUp), \\e[6~ (PageDown). ' +
+          'Example TUI flow: \\e[B to move down, \\r to confirm selection.',
         ),
       }),
     },
