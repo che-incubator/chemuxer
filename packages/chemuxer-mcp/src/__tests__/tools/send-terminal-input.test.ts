@@ -140,6 +140,8 @@ describe('send_terminal_input tool', () => {
     });
     expect(result.isError).toBe(true);
 
+    expect(client.sendInput).not.toHaveBeenCalled();
+
     const body = parseResult(result);
     expect(body.error_code).toBe('INVALID_INPUT');
     expect(body.message).toMatch(/unsupported escape/i);

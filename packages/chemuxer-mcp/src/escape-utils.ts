@@ -41,7 +41,11 @@ export function expandEscapes(input: string): string {
       if (!HEX_RE.test(hex)) {
         throw new Error(`Invalid hex escape: \\x${hex} at position ${i}`);
       }
-      out.push(String.fromCharCode(parseInt(hex, 16)));
+      const byte = parseInt(hex, 16);
+      if (byte > 0x7f) {
+        throw new Error(`Invalid hex escape: \\x${hex} at position ${i}. Only 0x00-0x7F supported (bytes above 0x7F are re-encoded as UTF-8 in JSON transport)`);
+      }
+      out.push(String.fromCharCode(byte));
       i += 4;
       continue;
     }

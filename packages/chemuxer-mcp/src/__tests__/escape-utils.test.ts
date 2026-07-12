@@ -130,5 +130,10 @@ describe('expandEscapes', () => {
     it('throws for trailing backslash', () => {
       expect(() => expandEscapes('hello\\')).toThrow(/trailing backslash|unsupported escape/i);
     });
+
+    it('throws for hex values above 0x7F', () => {
+      expect(() => expandEscapes('\\x80')).toThrow(/0x00-0x7F/);
+      expect(() => expandEscapes('\\xFF')).toThrow(/0x00-0x7F/);
+    });
   });
 });
