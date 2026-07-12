@@ -88,4 +88,31 @@ describe('SettingsManager', () => {
     expect(themeEnum).toContain('catppuccin-mocha');
     expect(themeEnum).toContain('catppuccin-latte');
   });
+
+  it('schema includes dimInactivePanes field with boolean type and default true', () => {
+    manager = new SettingsManager(configPath);
+    const schema = JSON.parse(manager.getSchemaString());
+    const dimField = schema.properties.terminal.properties.dimInactivePanes;
+    expect(dimField).toBeDefined();
+    expect(dimField.type).toBe('boolean');
+    expect(dimField.default).toBe(true);
+  });
+
+  it('schema includes inactivePaneDimAmount field with number type, min 0, max 1, default 0.7', () => {
+    manager = new SettingsManager(configPath);
+    const schema = JSON.parse(manager.getSchemaString());
+    const dimAmountField = schema.properties.terminal.properties.inactivePaneDimAmount;
+    expect(dimAmountField).toBeDefined();
+    expect(dimAmountField.type).toBe('number');
+    expect(dimAmountField.minimum).toBe(0);
+    expect(dimAmountField.maximum).toBe(1);
+    expect(dimAmountField.default).toBe(0.7);
+  });
+
+  it('defaults include dimInactivePanes=true and inactivePaneDimAmount=0.7', () => {
+    manager = new SettingsManager(configPath);
+    const settings = manager.getSettings();
+    expect((settings.terminal as any).dimInactivePanes).toBe(true);
+    expect((settings.terminal as any).inactivePaneDimAmount).toBe(0.7);
+  });
 });
