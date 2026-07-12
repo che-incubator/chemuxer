@@ -89,7 +89,7 @@ Uses kubeconfig for auth. Connects to workspace pods via K8s PortForward API.
 | `list_workspaces` | List DevWorkspace pods with status | — |
 | `list_terminals` | List terminal sessions in a workspace | `workspace` |
 | `get_terminal_output` | Get terminal buffer content (ANSI-stripped) | `workspace`, `session_id`, `max_bytes` |
-| `send_terminal_input` | Send text to a terminal (include `\n` for Enter) | `workspace`, `session_id`, `input` |
+| `send_terminal_input` | Send text with escape support (`\n`, `\r`, `\e`, `\t`, `\xNN`, `\cX`) | `workspace`, `session_id`, `input` |
 | `create_terminal` | Create a new terminal session | `workspace` |
 | `close_terminal` | Close a terminal session | `workspace`, `session_id` |
 | `get_activity_feed` | Get recent terminal activity (single or cross-workspace) | `workspace` (optional), `since`, `limit` |
