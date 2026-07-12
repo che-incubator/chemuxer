@@ -110,4 +110,40 @@ describe('send_terminal_input tool', () => {
     const body = parseResult(result);
     expect(body.error_code).toBe('UPSTREAM_ERROR');
   });
+
+  it('expands escape sequences before sending to upstream', async () => {
+    const client = makeClient();
+    const store = makeStore([readyWorkspace]);
+
+    const result = await callSendTerminalInput(store, client, {
+      workspace: 'ready-ws',
+      session_id: 'sess-1',
+      input: '\\e[B\\r',
+    });
+    expect(result.isError).toBeFalsy();
+
+    expect(client.sendInput).toHaveBeenCalledWith(
+      'http://10.0.0.1:7681',
+      'sess-1',
+      '\x1b[B\r',
+    );
+  });
+
+  it('returns error for invalid escape sequences', async () => {
+    const client = makeClient();
+    const store = makeStore([readyWorkspace]);
+
+    const result = await callSendTerminalInput(store, client, {
+      workspace: 'ready-ws',
+      session_id: 'sess-1',
+      input: '\\q',
+    });
+    expect(result.isError).toBe(true);
+
+    expect(client.sendInput).not.toHaveBeenCalled();
+
+    const body = parseResult(result);
+    expect(body.error_code).toBe('INVALID_INPUT');
+    expect(body.message).toMatch(/unsupported escape/i);
+  });
 });
