@@ -210,7 +210,6 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            const { Octokit } = require('@octokit/rest');
             const tag = `${{ env.IMAGE }}:pr-${{ github.event.pull_request.number }}`;
             const prNumber = ${{ github.event.pull_request.number }};
             const filename = `chemuxer-pr-${prNumber}-che-editor.yaml`;
@@ -226,7 +225,8 @@ jobs:
               core.warning('GIST_PAT secret not configured — skipping test workspace Gist. Add a PAT with gist scope as GIST_PAT secret.');
               return;
             }
-            const gistOctokit = new Octokit({ auth: gistToken });
+            const { getOctokit } = require('@actions/github');
+            const gistOctokit = getOctokit(gistToken);
 
             // Search existing comments for a previously created Gist ID (uses default GITHUB_TOKEN via `github`)
             const comments = await github.paginate(
@@ -249,12 +249,12 @@ jobs:
             if (gistMatch) {
               gistOwner = gistMatch[1];
               gistId = gistMatch[2];
-              await gistOctokit.gists.update({
+              await gistOctokit.rest.gists.update({
                 gist_id: gistId,
                 files: { [filename]: { content } },
               });
             } else {
-              const gist = await gistOctokit.gists.create({
+              const gist = await gistOctokit.rest.gists.create({
                 public: false,
                 files: { [filename]: { content } },
                 description: `chemuxer PR #${prNumber} editor definition`,
