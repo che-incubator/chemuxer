@@ -205,10 +205,12 @@ jobs:
 
       - name: Publish test workspace Gist
         uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        env:
+          GIST_TOKEN: ${{ secrets.GIST_PAT }}
         with:
-          github-token: ${{ secrets.GIST_PAT || secrets.GITHUB_TOKEN }}
           script: |
             const fs = require('fs');
+            const { Octokit } = require('@octokit/rest');
             const tag = `${{ env.IMAGE }}:pr-${{ github.event.pull_request.number }}`;
             const prNumber = ${{ github.event.pull_request.number }};
             const filename = `chemuxer-pr-${prNumber}-che-editor.yaml`;
@@ -218,7 +220,15 @@ jobs:
             const template = fs.readFileSync('.che/che-editor-template.yaml', 'utf8');
             const content = template.replace(/__CHEMUXER_IMAGE__/g, tag);
 
-            // Search existing comments for a previously created Gist ID
+            // Separate client for Gist operations (needs gist scope)
+            const gistToken = process.env.GIST_TOKEN;
+            if (!gistToken) {
+              core.warning('GIST_PAT secret not configured — skipping test workspace Gist. Add a PAT with gist scope as GIST_PAT secret.');
+              return;
+            }
+            const gistOctokit = new Octokit({ auth: gistToken });
+
+            // Search existing comments for a previously created Gist ID (uses default GITHUB_TOKEN via `github`)
             const comments = await github.paginate(
               github.rest.issues.listComments,
               {
@@ -229,7 +239,6 @@ jobs:
               },
             );
             const existing = comments.find(c =>
-              c.user?.login === 'github-actions[bot]' &&
               c.body?.includes(marker)
             );
 
@@ -238,16 +247,14 @@ jobs:
             const gistMatch = existing?.body?.match(/gist\.githubusercontent\.com\/([^/]+)\/([a-f0-9]+)\//);
 
             if (gistMatch) {
-              // Update existing Gist
               gistOwner = gistMatch[1];
               gistId = gistMatch[2];
-              await github.rest.gists.update({
+              await gistOctokit.gists.update({
                 gist_id: gistId,
                 files: { [filename]: { content } },
               });
             } else {
-              // Create new secret Gist
-              const gist = await github.rest.gists.create({
+              const gist = await gistOctokit.gists.create({
                 public: false,
                 files: { [filename]: { content } },
                 description: `chemuxer PR #${prNumber} editor definition`,
@@ -271,6 +278,7 @@ jobs:
               '```',
             ].join('\n');
 
+            // Post/update comment using default GITHUB_TOKEN (has repo access)
             if (existing) {
               await github.rest.issues.updateComment({
                 owner: context.repo.owner,
