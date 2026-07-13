@@ -109,5 +109,12 @@ export function useCommands(
       disabled: zoomed,
       action: () => { if (focusedPaneId) deps.createSplitSession(focusedPaneId, 'top'); },
     },
+    {
+      id: 'toggle-dim-inactive',
+      label: settings.terminal.dimInactivePanes ? 'Disable Dim Inactive Panes' : 'Enable Dim Inactive Panes',
+      action: () => {
+        updateSettings({ ...settings, terminal: { ...settings.terminal, dimInactivePanes: !settings.terminal.dimInactivePanes } }).catch(console.warn);
+      },
+    },
   ];
 }

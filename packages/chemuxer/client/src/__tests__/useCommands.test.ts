@@ -26,9 +26,9 @@ function mockDeps(overrides: Partial<CommandDeps> = {}): CommandDeps {
 }
 
 describe('useCommands', () => {
-  it('returns 8 commands', () => {
+  it('returns 10 commands', () => {
     const commands = useCommands(mockDeps(), DEFAULT_SETTINGS, vi.fn());
-    expect(commands).toHaveLength(9);
+    expect(commands).toHaveLength(10);
   });
 
   it('returns commands with correct labels', () => {
@@ -74,9 +74,9 @@ describe('useCommands', () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it('returns 8 commands including Select Color Theme', () => {
+  it('returns 10 commands including Select Color Theme', () => {
     const commands = useCommands(mockDeps(), DEFAULT_SETTINGS, vi.fn());
-    expect(commands).toHaveLength(9);
+    expect(commands).toHaveLength(10);
     const labels = commands.map((c) => c.label);
     expect(labels).toContain('Select Color Theme');
   });
@@ -222,5 +222,49 @@ describe('useCommands', () => {
     expect(cmd).toBeDefined();
     cmd.action!();
     expect(deps.toggleZoom).toHaveBeenCalled();
+  });
+
+  it('toggle-dim-inactive command exists with id toggle-dim-inactive', () => {
+    const commands = useCommands(mockDeps(), DEFAULT_SETTINGS, vi.fn());
+    const cmd = commands.find((c) => c.id === 'toggle-dim-inactive');
+    expect(cmd).toBeDefined();
+  });
+
+  it('toggle-dim-inactive label is Disable Dim Inactive Panes when dimInactivePanes is true', () => {
+    const settings: Settings = { ...DEFAULT_SETTINGS, terminal: { ...DEFAULT_SETTINGS.terminal, dimInactivePanes: true } };
+    const commands = useCommands(mockDeps(), settings, vi.fn());
+    const cmd = commands.find((c) => c.id === 'toggle-dim-inactive')!;
+    expect(cmd.label).toBe('Disable Dim Inactive Panes');
+  });
+
+  it('toggle-dim-inactive label is Enable Dim Inactive Panes when dimInactivePanes is false', () => {
+    const settings: Settings = { ...DEFAULT_SETTINGS, terminal: { ...DEFAULT_SETTINGS.terminal, dimInactivePanes: false } };
+    const commands = useCommands(mockDeps(), settings, vi.fn());
+    const cmd = commands.find((c) => c.id === 'toggle-dim-inactive')!;
+    expect(cmd.label).toBe('Enable Dim Inactive Panes');
+  });
+
+  it('toggle-dim-inactive action calls updateSettings toggling dimInactivePanes', () => {
+    const updateSettings = vi.fn().mockResolvedValue(undefined);
+    const settings: Settings = { ...DEFAULT_SETTINGS, terminal: { ...DEFAULT_SETTINGS.terminal, dimInactivePanes: true } };
+    const commands = useCommands(mockDeps(), settings, updateSettings);
+    const cmd = commands.find((c) => c.id === 'toggle-dim-inactive')!;
+    cmd.action!();
+    expect(updateSettings).toHaveBeenCalledWith({
+      ...settings,
+      terminal: { ...settings.terminal, dimInactivePanes: false },
+    });
+  });
+
+  it('toggle-dim-inactive action enables dimInactivePanes when currently false', () => {
+    const updateSettings = vi.fn().mockResolvedValue(undefined);
+    const settings: Settings = { ...DEFAULT_SETTINGS, terminal: { ...DEFAULT_SETTINGS.terminal, dimInactivePanes: false } };
+    const commands = useCommands(mockDeps(), settings, updateSettings);
+    const cmd = commands.find((c) => c.id === 'toggle-dim-inactive')!;
+    cmd.action!();
+    expect(updateSettings).toHaveBeenCalledWith({
+      ...settings,
+      terminal: { ...settings.terminal, dimInactivePanes: true },
+    });
   });
 });
