@@ -205,8 +205,10 @@ jobs:
 
       - name: Create or update test workspace Gist
         id: gist
-        if: ${{ secrets.GIST_PAT != '' }}
+        if: env.GIST_TOKEN != ''
         uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        env:
+          GIST_TOKEN: ${{ secrets.GIST_PAT }}
         with:
           github-token: ${{ secrets.GIST_PAT }}
           script: |
