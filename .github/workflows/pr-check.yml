@@ -202,3 +202,83 @@ jobs:
                 body,
               });
             }
+
+      - name: Publish test workspace Gist
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        with:
+          script: |
+            const fs = require('fs');
+            const tag = `${{ env.IMAGE }}:pr-${{ github.event.pull_request.number }}`;
+            const prNumber = ${{ github.event.pull_request.number }};
+            const filename = `chemuxer-pr-${prNumber}-che-editor.yaml`;
+            const marker = '<!-- chemuxer-test-workspace-comment -->';
+
+            // Generate che-editor.yaml from template
+            const template = fs.readFileSync('.che/che-editor-template.yaml', 'utf8');
+            const content = template.replace(/__CHEMUXER_IMAGE__/g, tag);
+
+            // Search existing comments for a previously created Gist ID
+            const comments = await github.paginate(
+              github.rest.issues.listComments,
+              {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                per_page: 100,
+              },
+            );
+            const existing = comments.find(c =>
+              c.user?.login === 'github-actions[bot]' &&
+              c.body?.includes(marker)
+            );
+
+            let gistId;
+            const gistIdMatch = existing?.body?.match(/gist\.githubusercontent\.com\/[^/]+\/([a-f0-9]+)\//);
+
+            if (gistIdMatch) {
+              // Update existing Gist
+              gistId = gistIdMatch[1];
+              await github.rest.gists.update({
+                gist_id: gistId,
+                files: { [filename]: { content } },
+              });
+            } else {
+              // Create new secret Gist
+              const gist = await github.rest.gists.create({
+                public: false,
+                files: { [filename]: { content } },
+                description: `chemuxer PR #${prNumber} editor definition`,
+              });
+              gistId = gist.data.id;
+            }
+
+            const rawUrl = `https://gist.githubusercontent.com/${context.repo.owner}/${gistId}/raw/${filename}`;
+
+            const body = [
+              marker,
+              '### Test this PR in a DevWorkspace',
+              '',
+              `Editor definition: \`${rawUrl}\``,
+              '',
+              'Open a workspace with this PR build — replace `<CHE_HOST>` with your Che dashboard URL:',
+              '',
+              '```',
+              `https://<CHE_HOST>/#<git-repo-url>?che-editor=${rawUrl}`,
+              '```',
+            ].join('\n');
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
