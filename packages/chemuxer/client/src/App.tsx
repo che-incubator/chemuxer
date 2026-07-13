@@ -147,6 +147,8 @@ export function App() {
             wsUrl={WS_BASE}
             settings={settings}
             zoomedPaneId={layout.zoomedPaneId}
+            focusedPaneId={layout.focusedPaneId}
+            paneCount={Object.keys(layout.panes).length}
             onSelectSession={layout.setActiveSession}
             onCloseSession={handleCloseSession}
             onCreateSession={control.createSession}

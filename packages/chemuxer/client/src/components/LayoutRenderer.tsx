@@ -13,6 +13,8 @@ interface LayoutRendererProps {
   wsUrl: string;
   settings: Settings;
   zoomedPaneId?: string | null;
+  focusedPaneId?: string | null;
+  paneCount?: number;
   onSelectSession: (paneId: string, sessionId: string) => void;
   onCloseSession: (sessionId: string) => void;
   onCreateSession: () => void;
@@ -39,6 +41,8 @@ export function LayoutRenderer({
   wsUrl,
   settings,
   zoomedPaneId,
+  focusedPaneId,
+  paneCount,
   onSelectSession,
   onCloseSession,
   onCreateSession,
@@ -57,7 +61,7 @@ export function LayoutRenderer({
   renamingSessionId,
   onContextSplit,
 }: LayoutRendererProps) {
-  const sharedProps = { panes, sessions, wsUrl, settings, zoomedPaneId, onSelectSession, onCloseSession, onCreateSession, onPinSession, onSplit, onMoveTab, onFocus, onSaveSettings, onSelectSettings, onMoveSettings, onSplitSettings, onCloseSettings, onRenameRequest, onRenameConfirm, onRenameCancel, renamingSessionId, onContextSplit, zoomed: !!zoomedPaneId };
+  const sharedProps = { panes, sessions, wsUrl, settings, zoomedPaneId, focusedPaneId, paneCount, onSelectSession, onCloseSession, onCreateSession, onPinSession, onSplit, onMoveTab, onFocus, onSaveSettings, onSelectSettings, onMoveSettings, onSplitSettings, onCloseSettings, onRenameRequest, onRenameConfirm, onRenameCancel, renamingSessionId, onContextSplit, zoomed: !!zoomedPaneId };
 
   if (zoomedPaneId) {
     const pane = panes[zoomedPaneId];
@@ -68,6 +72,8 @@ export function LayoutRenderer({
         sessions={sessions}
         wsUrl={wsUrl}
         settings={settings}
+        focusedPaneId={focusedPaneId}
+        paneCount={paneCount}
         onSelectSession={onSelectSession}
         onCloseSession={onCloseSession}
         onCreateSession={onCreateSession}
@@ -99,6 +105,8 @@ export function LayoutRenderer({
         sessions={sessions}
         wsUrl={wsUrl}
         settings={settings}
+        focusedPaneId={focusedPaneId}
+        paneCount={paneCount}
         onSelectSession={onSelectSession}
         onCloseSession={onCloseSession}
         onCreateSession={onCreateSession}
