@@ -51,7 +51,7 @@ const makePaneNodeProps = (overrides?: Partial<{
       inactivePaneDimAmount: 0.7,
     },
     shell: { path: '' },
-    scrollback: { size: 102400 },
+    scrollback: { lines: 5000 },
   };
 
   return {
@@ -133,7 +133,7 @@ describe('PaneNode dim behavior', () => {
         inactivePaneDimAmount: 0.7,
       },
       shell: { path: '' },
-      scrollback: { size: 102400 },
+      scrollback: { lines: 5000 },
     };
     const props = makePaneNodeProps({
       focusedPaneId: 'pane-other',
@@ -156,7 +156,7 @@ describe('PaneNode dim behavior', () => {
         inactivePaneDimAmount: 0.5,
       },
       shell: { path: '' },
-      scrollback: { size: 102400 },
+      scrollback: { lines: 5000 },
     };
     const props = makePaneNodeProps({
       focusedPaneId: 'pane-other',
