@@ -206,6 +206,7 @@ jobs:
       - name: Publish test workspace Gist
         uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
         with:
+          github-token: ${{ secrets.GIST_PAT || secrets.GITHUB_TOKEN }}
           script: |
             const fs = require('fs');
             const tag = `${{ env.IMAGE }}:pr-${{ github.event.pull_request.number }}`;
@@ -233,11 +234,13 @@ jobs:
             );
 
             let gistId;
-            const gistIdMatch = existing?.body?.match(/gist\.githubusercontent\.com\/[^/]+\/([a-f0-9]+)\//);
+            let gistOwner;
+            const gistMatch = existing?.body?.match(/gist\.githubusercontent\.com\/([^/]+)\/([a-f0-9]+)\//);
 
-            if (gistIdMatch) {
+            if (gistMatch) {
               // Update existing Gist
-              gistId = gistIdMatch[1];
+              gistOwner = gistMatch[1];
+              gistId = gistMatch[2];
               await github.rest.gists.update({
                 gist_id: gistId,
                 files: { [filename]: { content } },
@@ -250,9 +253,10 @@ jobs:
                 description: `chemuxer PR #${prNumber} editor definition`,
               });
               gistId = gist.data.id;
+              gistOwner = gist.data.owner.login;
             }
 
-            const rawUrl = `https://gist.githubusercontent.com/${context.repo.owner}/${gistId}/raw/${filename}`;
+            const rawUrl = `https://gist.githubusercontent.com/${gistOwner}/${gistId}/raw/${filename}`;
 
             const body = [
               marker,
