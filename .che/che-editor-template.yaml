@@ -6,59 +6,58 @@
 #   2. container-contribution merges volume + endpoint into the workspace container
 #   3. workspace entrypoint runs chemuxer from /chemuxer-vol/
 
-inline:
-  schemaVersion: 2.1.0
-  metadata:
-    name: chemuxer-editor
-  commands:
-    - id: init-chemuxer
-      apply:
-        component: chemuxer-injector
-  events:
-    preStart:
-      - init-chemuxer
-  components:
-    - name: chemuxer-injector
-      container:
-        image: __CHEMUXER_IMAGE__
-        command:
-          - sh
-          - -c
-          - |
-            mkdir -p /chemuxer-vol/dist/server /chemuxer-vol/dist/client &&
-            cp /app/dist/server/server.js /chemuxer-vol/dist/server/ &&
-            cp -r /app/dist/client/* /chemuxer-vol/dist/client/ &&
-            cp -r /app/node_modules /chemuxer-vol/node_modules &&
-            rm -rf /chemuxer-vol/node_modules/node-pty
-        volumeMounts:
-          - name: chemuxer-volume
-            path: /chemuxer-vol
-        memoryLimit: 128Mi
-        memoryRequest: 32Mi
-        cpuLimit: 500m
-        cpuRequest: 30m
-    - name: chemuxer-runtime
-      attributes:
-        controller.devfile.io/container-contribution: true
-      container:
-        image: __CHEMUXER_IMAGE__
-        memoryLimit: 128Mi
-        memoryRequest: 32Mi
-        cpuLimit: 500m
-        cpuRequest: 30m
-        endpoints:
-          - name: chemuxer-terminal
-            targetPort: 7681
-            exposure: public
-            protocol: https
-            attributes:
-              type: main
-              cookiesAuthEnabled: true
-              discoverable: false
-              urlRewriteSupported: true
-        volumeMounts:
-          - name: chemuxer-volume
-            path: /chemuxer-vol
-    - name: chemuxer-volume
-      volume:
-        ephemeral: true
+schemaVersion: 2.1.0
+metadata:
+  name: chemuxer-editor
+commands:
+  - id: init-chemuxer
+    apply:
+      component: chemuxer-injector
+events:
+  preStart:
+    - init-chemuxer
+components:
+  - name: chemuxer-injector
+    container:
+      image: __CHEMUXER_IMAGE__
+      command:
+        - sh
+        - -c
+        - |
+          mkdir -p /chemuxer-vol/dist/server /chemuxer-vol/dist/client &&
+          cp /app/dist/server/server.js /chemuxer-vol/dist/server/ &&
+          cp -r /app/dist/client/* /chemuxer-vol/dist/client/ &&
+          cp -r /app/node_modules /chemuxer-vol/node_modules &&
+          rm -rf /chemuxer-vol/node_modules/node-pty
+      volumeMounts:
+        - name: chemuxer-volume
+          path: /chemuxer-vol
+      memoryLimit: 128Mi
+      memoryRequest: 32Mi
+      cpuLimit: 500m
+      cpuRequest: 30m
+  - name: chemuxer-runtime
+    attributes:
+      controller.devfile.io/container-contribution: true
+    container:
+      image: __CHEMUXER_IMAGE__
+      memoryLimit: 128Mi
+      memoryRequest: 32Mi
+      cpuLimit: 500m
+      cpuRequest: 30m
+      endpoints:
+        - name: chemuxer-terminal
+          targetPort: 7681
+          exposure: public
+          protocol: https
+          attributes:
+            type: main
+            cookiesAuthEnabled: true
+            discoverable: false
+            urlRewriteSupported: true
+      volumeMounts:
+        - name: chemuxer-volume
+          path: /chemuxer-vol
+  - name: chemuxer-volume
+    volume:
+      ephemeral: true
