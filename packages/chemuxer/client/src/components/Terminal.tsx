@@ -48,6 +48,10 @@ export function Terminal({ sessionId, wsUrl, visible, settings }: TerminalProps)
     const fit = new FitAddon();
     term.loadAddon(fit);
     term.open(container);
+
+    // Suppress OSC 10 and OSC 11 color queries to prevent prompt corruption on high-latency connections
+    term.parser.registerOscHandler(10, () => true);
+    term.parser.registerOscHandler(11, () => true);
     fit.fit();
 
     termRef.current = term;
