@@ -48,16 +48,22 @@ export function Terminal({ sessionId, wsUrl, visible, settings }: TerminalProps)
     const fit = new FitAddon();
     term.loadAddon(fit);
     term.open(container);
-
     // Suppress OSC 10 and OSC 11 color queries to prevent prompt corruption on high-latency connections
     term.parser.registerOscHandler(10, () => true);
     term.parser.registerOscHandler(11, () => true);
-    fit.fit();
+    
+    if (container.clientWidth > 0 && container.clientHeight > 0) {
+      fit.fit();
+    }
 
     termRef.current = term;
     fitRef.current = fit;
 
-    const ro = new ResizeObserver(() => fit.fit());
+    const ro = new ResizeObserver(() => {
+      if (container.clientWidth > 0 && container.clientHeight > 0) {
+        fit.fit();
+      }
+    });
     ro.observe(container);
 
     return () => {
@@ -90,7 +96,10 @@ export function Terminal({ sessionId, wsUrl, visible, settings }: TerminalProps)
 
   useEffect(() => {
     if (visible && fitRef.current) {
-      requestAnimationFrame(() => fitRef.current?.fit());
+      // Use a tiny timeout to ensure the DOM has applied display: block and computed dimensions
+      setTimeout(() => {
+        if (containerRef.current?.clientWidth) fitRef.current?.fit();
+      }, 10);
     }
   }, [visible]);
 
@@ -100,7 +109,9 @@ export function Terminal({ sessionId, wsUrl, visible, settings }: TerminalProps)
       termRef.current.options.fontSize = settings.terminal.fontSize;
       termRef.current.options.fontFamily = settings.terminal.fontFamily;
       termRef.current.options.theme = theme;
-      fitRef.current?.fit();
+      if (containerRef.current && containerRef.current.clientWidth > 0) {
+        fitRef.current?.fit();
+      }
     }
   }, [settings.terminal.fontSize, settings.terminal.fontFamily, settings.terminal.theme]);
 
