@@ -1,0 +1,33 @@
+name: Pull Request Cleanup
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup-preview-branch:
+    name: Cleanup Preview Branch
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete preview branch
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const branchRef = `heads/preview/pr-${context.issue.number}`;
+            try {
+              await github.rest.git.deleteRef({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: branchRef,
+              });
+              console.log(`Deleted branch ${branchRef}`);
+            } catch (error) {
+              if (error.status === 422) {
+                console.log(`Branch ${branchRef} does not exist or was already deleted.`);
+              } else {
+                throw error;
+              }
+            }

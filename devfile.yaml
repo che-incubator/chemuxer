@@ -1,0 +1,28 @@
+schemaVersion: 2.3.0
+metadata:
+  name: chemuxer-preview
+
+attributes:
+  controller.devfile.io/storage-type: per-workspace
+
+components:
+  - name: chemuxer
+    container:
+      image: quay.io/devfile/universal-developer-image:ubi9-latest
+      memoryRequest: 512Mi
+      memoryLimit: 1Gi
+      command: ["/bin/bash", "-c"]
+      args:
+        - |
+          export STATIC_DIR=/chemuxer-vol/dist/client
+          exec node /chemuxer-vol/dist/server/server.js
+      endpoints:
+        - name: chemuxer-terminal
+          targetPort: 7681
+          exposure: public
+          protocol: https
+          attributes:
+            type: main
+            cookiesAuthEnabled: true
+            discoverable: false
+            urlRewriteSupported: true
