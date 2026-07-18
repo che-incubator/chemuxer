@@ -46,7 +46,7 @@ components:
       cpuLimit: 500m
       cpuRequest: 30m
       endpoints:
-        - name: chemuxer-terminal
+        - name: chemuxer
           targetPort: 7681
           exposure: public
           protocol: https

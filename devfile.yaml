@@ -17,7 +17,7 @@ components:
           export STATIC_DIR=/chemuxer-vol/dist/client
           exec node /chemuxer-vol/dist/server/server.js
       endpoints:
-        - name: chemuxer-terminal
+        - name: chemuxer
           targetPort: 7681
           exposure: public
           protocol: https
