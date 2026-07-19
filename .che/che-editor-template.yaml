@@ -25,7 +25,7 @@ components:
         - -c
         - |
           mkdir -p /chemuxer-vol/dist/server /chemuxer-vol/dist/client &&
-          cp /app/dist/server/server.js /chemuxer-vol/dist/server/ &&
+          cp -r /app/dist/server/* /chemuxer-vol/dist/server/ &&
           cp -r /app/dist/client/* /chemuxer-vol/dist/client/ &&
           cp -r /app/node_modules /chemuxer-vol/node_modules
       volumeMounts:
