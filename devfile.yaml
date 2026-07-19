@@ -20,6 +20,7 @@ components:
           export HOME=/home/user
           cd $HOME
           export STATIC_DIR=/chemuxer-vol/dist/client
+          while [ ! -f /chemuxer-vol/dist/server/server.js ]; do sleep 1; done
           exec node /chemuxer-vol/dist/server/server.js
       endpoints:
         - name: chemuxer
@@ -31,9 +32,3 @@ components:
             cookiesAuthEnabled: true
             discoverable: false
             urlRewriteSupported: true
-      volumeMounts:
-        - name: injected-tools
-          path: /injected-tools
-  - name: injected-tools
-    volume:
-      size: 256Mi
