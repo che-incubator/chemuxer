@@ -8,7 +8,7 @@ attributes:
 components:
   - name: chemuxer
     container:
-      image: quay.io/devfile/universal-developer-image:ubi9-latest
+      image: registry.access.redhat.com/ubi9/nodejs-22:latest
       memoryRequest: 512Mi
       memoryLimit: 1Gi
       command: ["/bin/bash", "-c"]
