@@ -31,3 +31,9 @@ components:
             cookiesAuthEnabled: true
             discoverable: false
             urlRewriteSupported: true
+      volumeMounts:
+        - name: injected-tools
+          path: /injected-tools
+  - name: injected-tools
+    volume:
+      size: 256Mi
