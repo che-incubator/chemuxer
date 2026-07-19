@@ -97,9 +97,12 @@ export function Terminal({ sessionId, wsUrl, visible, settings }: TerminalProps)
   useEffect(() => {
     if (visible && fitRef.current) {
       // Use a tiny timeout to ensure the DOM has applied display: block and computed dimensions
-      setTimeout(() => {
-        if (containerRef.current?.clientWidth) fitRef.current?.fit();
+      const timeoutId = setTimeout(() => {
+        if (containerRef.current?.clientWidth && containerRef.current?.clientHeight) {
+          fitRef.current?.fit();
+        }
       }, 10);
+      return () => clearTimeout(timeoutId);
     }
   }, [visible]);
 
@@ -109,7 +112,7 @@ export function Terminal({ sessionId, wsUrl, visible, settings }: TerminalProps)
       termRef.current.options.fontSize = settings.terminal.fontSize;
       termRef.current.options.fontFamily = settings.terminal.fontFamily;
       termRef.current.options.theme = theme;
-      if (containerRef.current && containerRef.current.clientWidth > 0) {
+      if (containerRef.current && containerRef.current.clientWidth > 0 && containerRef.current.clientHeight > 0) {
         fitRef.current?.fit();
       }
     }
