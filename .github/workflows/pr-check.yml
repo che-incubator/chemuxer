@@ -125,12 +125,12 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       pull-requests: write
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
         with:
-          persist-credentials: false
+          persist-credentials: true
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@06116385d9baf250c9f4dcb4858b16962ea869c3 # v4
@@ -203,76 +203,45 @@ jobs:
               });
             }
 
-      - name: Create or update test workspace Gist
-        id: gist
-        if: env.GIST_TOKEN != ''
-        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
-        env:
-          GIST_TOKEN: ${{ secrets.GIST_PAT }}
-        with:
-          github-token: ${{ secrets.GIST_PAT }}
-          script: |
-            const fs = require('fs');
-            const tag = `${{ env.IMAGE }}:pr-${{ github.event.pull_request.number }}`;
-            const prNumber = ${{ github.event.pull_request.number }};
-            const filename = `chemuxer-pr-${prNumber}-che-editor.yaml`;
-            const marker = '<!-- chemuxer-test-workspace-comment -->';
-
-            const template = fs.readFileSync('.che/che-editor-template.yaml', 'utf8');
-            const content = template.replace(/__CHEMUXER_IMAGE__/g, tag);
-
-            // Find existing Gist ID from previous PR comment
-            const comments = await github.paginate(
-              github.rest.issues.listComments,
-              {
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: prNumber,
-                per_page: 100,
-              },
-            );
-            const existing = comments.find(c => c.body?.includes(marker));
-            const gistMatch = existing?.body?.match(/gist\.githubusercontent\.com\/([^/]+)\/([a-f0-9]+)\//);
-
-            let gistId, gistOwner;
-            if (gistMatch) {
-              gistOwner = gistMatch[1];
-              gistId = gistMatch[2];
-              await github.rest.gists.update({
-                gist_id: gistId,
-                files: { [filename]: { content } },
-              });
-            } else {
-              const gist = await github.rest.gists.create({
-                public: false,
-                files: { [filename]: { content } },
-                description: `chemuxer PR #${prNumber} editor definition`,
-              });
-              gistId = gist.data.id;
-              gistOwner = gist.data.owner.login;
-            }
-
-            const rawUrl = `https://gist.githubusercontent.com/${gistOwner}/${gistId}/raw/${filename}`;
-            core.setOutput('raw-url', rawUrl);
+      - name: Create preview branch
+        id: preview-branch
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          
+          # Extract PR number
+          PR_NUMBER=${{ github.event.pull_request.number }}
+          PREVIEW_BRANCH="preview/pr-${PR_NUMBER}"
+          
+          # Switch to or create the preview branch based on the current PR commit
+          git checkout -b ${PREVIEW_BRANCH}
+          
+          # Update the editor definition with the newly built PR image
+          TAG="${{ env.IMAGE }}:pr-${PR_NUMBER}"
+          sed -i "s|__CHEMUXER_IMAGE__|${TAG}|g" .che/che-editor-template.yaml
+          mv .che/che-editor-template.yaml .che/che-editor.yaml
+          
+          # Commit and force push the preview branch
+          git add .che/che-editor.yaml
+          git commit -m "chore: setup preview workspace for PR #${PR_NUMBER}"
+          git push -f origin ${PREVIEW_BRANCH}
 
       - name: Post test workspace comment
-        if: steps.gist.outputs.raw-url
         uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
         with:
           script: |
-            const rawUrl = '${{ steps.gist.outputs.raw-url }}';
+            const prNumber = ${{ github.event.pull_request.number }};
+            const previewBranch = `preview/pr-${prNumber}`;
             const marker = '<!-- chemuxer-test-workspace-comment -->';
 
             const body = [
               marker,
               '### Test this PR in a DevWorkspace',
               '',
-              `Editor definition: \`${rawUrl}\``,
-              '',
               'Open a workspace with this PR build — replace `<CHE_HOST>` with your Che dashboard URL:',
               '',
               '```',
-              `https://<CHE_HOST>/#https://github.com/${context.repo.owner}/${context.repo.repo}?che-editor=${rawUrl}`,
+              `https://<CHE_HOST>/#https://github.com/${context.repo.owner}/${context.repo.repo}/tree/${previewBranch}?che-editor=https://raw.githubusercontent.com/${context.repo.owner}/${context.repo.repo}/${previewBranch}/.che/che-editor.yaml`,
               '```',
             ].join('\n');
 

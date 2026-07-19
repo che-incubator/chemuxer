@@ -27,8 +27,7 @@ components:
           mkdir -p /chemuxer-vol/dist/server /chemuxer-vol/dist/client &&
           cp /app/dist/server/server.js /chemuxer-vol/dist/server/ &&
           cp -r /app/dist/client/* /chemuxer-vol/dist/client/ &&
-          cp -r /app/node_modules /chemuxer-vol/node_modules &&
-          rm -rf /chemuxer-vol/node_modules/node-pty
+          cp -r /app/node_modules /chemuxer-vol/node_modules
       volumeMounts:
         - name: chemuxer-volume
           path: /chemuxer-vol
@@ -46,7 +45,7 @@ components:
       cpuLimit: 500m
       cpuRequest: 30m
       endpoints:
-        - name: chemuxer-terminal
+        - name: chemuxer
           targetPort: 7681
           exposure: public
           protocol: https
