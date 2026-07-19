@@ -241,7 +241,7 @@ jobs:
               'Open a workspace with this PR build — replace `<CHE_HOST>` with your Che dashboard URL:',
               '',
               '```',
-              `https://<CHE_HOST>/#https://github.com/${context.repo.owner}/${context.repo.repo}/tree/${previewBranch}`,
+              `https://<CHE_HOST>/#https://github.com/${context.repo.owner}/${context.repo.repo}/tree/${previewBranch}?che-editor=https://raw.githubusercontent.com/${context.repo.owner}/${context.repo.repo}/${previewBranch}/.che/che-editor.yaml`,
               '```',
             ].join('\n');
 
