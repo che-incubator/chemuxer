@@ -14,8 +14,13 @@ components:
       command: ["/bin/bash", "-c"]
       args:
         - |
+          # Wait for the volume to be populated by the init container
+          while [ ! -f /chemuxer-vol/dist/server/server.js ]; do sleep 1; done
           export STATIC_DIR=/chemuxer-vol/dist/client
           exec node /chemuxer-vol/dist/server/server.js
+      volumeMounts:
+        - name: chemuxer-volume
+          path: /chemuxer-vol
       endpoints:
         - name: chemuxer
           targetPort: 7681
@@ -26,3 +31,5 @@ components:
             cookiesAuthEnabled: true
             discoverable: false
             urlRewriteSupported: true
+  - name: chemuxer-volume
+    volume: {}
