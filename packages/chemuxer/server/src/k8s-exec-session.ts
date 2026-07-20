@@ -5,7 +5,7 @@ import { Terminal as HeadlessTerminal } from '@xterm/headless';
 import { SerializeAddon } from '@xterm/addon-serialize';
 import type { SessionInfo } from '@chemuxer/shared';
 import type { ISession, SessionOptions } from './session.js';
-import { Writable, Readable, PassThrough } from 'stream';
+import { Writable, PassThrough } from 'stream';
 import WebSocket from 'ws';
 
 export interface K8sExecSessionOptions extends SessionOptions {
