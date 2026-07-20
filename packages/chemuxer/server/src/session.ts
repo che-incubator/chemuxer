@@ -161,6 +161,7 @@ export class Session {
       renamed: this.customTitle !== null,
       pinned: this._pinned,
       createdAt: this.createdAt,
+      container: '',
     };
   }
 }

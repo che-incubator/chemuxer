@@ -5,8 +5,8 @@ import type { SessionInfo } from '@chemuxer/shared';
 import type { TabEntry } from '../types/layout.js';
 
 const sessions: SessionInfo[] = [
-  { id: 'a', shell: '/bin/bash', title: 'bash', renamed: false, createdAt: 1000 },
-  { id: 'b', shell: '/bin/zsh', title: 'zsh', renamed: false, createdAt: 2000 },
+  { id: 'a', shell: '/bin/bash', title: 'bash', renamed: false, pinned: false, createdAt: 1000, container: '' },
+  { id: 'b', shell: '/bin/zsh', title: 'zsh', renamed: false, pinned: false, createdAt: 2000, container: '' },
 ];
 
 describe('PaneTabBar', () => {
@@ -279,7 +279,7 @@ describe('PaneTabBar', () => {
 
   it('shows custom title without tab number when session is renamed', () => {
     const renamedSessions: SessionInfo[] = [
-      { id: 'a', shell: '/bin/bash', title: 'my server', renamed: true, createdAt: 1000 },
+      { id: 'a', shell: '/bin/bash', title: 'my server', renamed: true, pinned: false, createdAt: 1000, container: '' },
     ];
     const entries: TabEntry[] = [
       { type: 'terminal', sessionId: 'a', tabNumber: 1 },

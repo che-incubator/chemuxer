@@ -60,8 +60,8 @@ describe('useLayout', () => {
 
   it('initializes with single leaf pane containing all sessions', async () => {
     const { result } = await setupWithSessions([
-      { id: 'a', shell: '/bin/bash', title: 'bash', renamed: false, createdAt: 1000 },
-      { id: 'b', shell: '/bin/zsh', title: 'zsh', renamed: false, createdAt: 2000 },
+      { id: 'a', shell: '/bin/bash', title: 'bash', renamed: false, pinned: false, createdAt: 1000, container: '' },
+      { id: 'b', shell: '/bin/zsh', title: 'zsh', renamed: false, pinned: false, createdAt: 2000, container: '' },
     ]);
 
     if (!result.current) {
@@ -77,8 +77,8 @@ describe('useLayout', () => {
 
   it('splitPane replaces leaf with split node', async () => {
     const { result } = await setupWithSessions([
-      { id: 'a', shell: '/bin/bash', title: 'bash', renamed: false, createdAt: 1000 },
-      { id: 'b', shell: '/bin/zsh', title: 'zsh', renamed: false, createdAt: 2000 },
+      { id: 'a', shell: '/bin/bash', title: 'bash', renamed: false, pinned: false, createdAt: 1000, container: '' },
+      { id: 'b', shell: '/bin/zsh', title: 'zsh', renamed: false, pinned: false, createdAt: 2000, container: '' },
     ]);
 
     const paneId = (result.current.tree as any).paneId;
@@ -104,8 +104,8 @@ describe('useLayout', () => {
 
   it('splitPane: left puts new pane first, direction vertical', async () => {
     const { result } = await setupWithSessions([
-      { id: 'a', shell: '/bin/bash', title: 'bash', renamed: false, createdAt: 1000 },
-      { id: 'b', shell: '/bin/zsh', title: 'zsh', renamed: false, createdAt: 2000 },
+      { id: 'a', shell: '/bin/bash', title: 'bash', renamed: false, pinned: false, createdAt: 1000, container: '' },
+      { id: 'b', shell: '/bin/zsh', title: 'zsh', renamed: false, pinned: false, createdAt: 2000, container: '' },
     ]);
 
     const paneId = (result.current.tree as any).paneId;
@@ -124,8 +124,8 @@ describe('useLayout', () => {
 
   it('splitPane: top creates horizontal split', async () => {
     const { result } = await setupWithSessions([
-      { id: 'a', shell: '/bin/bash', title: 'bash', renamed: false, createdAt: 1000 },
-      { id: 'b', shell: '/bin/zsh', title: 'zsh', renamed: false, createdAt: 2000 },
+      { id: 'a', shell: '/bin/bash', title: 'bash', renamed: false, pinned: false, createdAt: 1000, container: '' },
+      { id: 'b', shell: '/bin/zsh', title: 'zsh', renamed: false, pinned: false, createdAt: 2000, container: '' },
     ]);
 
     const paneId = (result.current.tree as any).paneId;
@@ -141,7 +141,7 @@ describe('useLayout', () => {
 
   it('splitPane: only tab onto same pane edge is no-op', async () => {
     const { result } = await setupWithSessions([
-      { id: 'a', shell: '/bin/bash', title: 'bash', renamed: false, createdAt: 1000 },
+      { id: 'a', shell: '/bin/bash', title: 'bash', renamed: false, pinned: false, createdAt: 1000, container: '' },
     ]);
 
     const paneId = (result.current.tree as any).paneId;
@@ -155,8 +155,8 @@ describe('useLayout', () => {
 
   it('moveTab moves session between panes', async () => {
     const { result } = await setupWithSessions([
-      { id: 'a', shell: '/bin/bash', title: 'bash', renamed: false, createdAt: 1000 },
-      { id: 'b', shell: '/bin/zsh', title: 'zsh', renamed: false, createdAt: 2000 },
+      { id: 'a', shell: '/bin/bash', title: 'bash', renamed: false, pinned: false, createdAt: 1000, container: '' },
+      { id: 'b', shell: '/bin/zsh', title: 'zsh', renamed: false, pinned: false, createdAt: 2000, container: '' },
     ]);
 
     const paneId = (result.current.tree as any).paneId;
@@ -180,8 +180,8 @@ describe('useLayout', () => {
 
   it('moveTab to same pane is no-op', async () => {
     const { result } = await setupWithSessions([
-      { id: 'a', shell: '/bin/bash', title: 'bash', renamed: false, createdAt: 1000 },
-      { id: 'b', shell: '/bin/zsh', title: 'zsh', renamed: false, createdAt: 2000 },
+      { id: 'a', shell: '/bin/bash', title: 'bash', renamed: false, pinned: false, createdAt: 1000, container: '' },
+      { id: 'b', shell: '/bin/zsh', title: 'zsh', renamed: false, pinned: false, createdAt: 2000, container: '' },
     ]);
 
     const paneId = (result.current.tree as any).paneId;
@@ -195,8 +195,8 @@ describe('useLayout', () => {
 
   it('collapse: session closed removes pane and unwraps split', async () => {
     const sessions = [
-      { id: 'a', shell: '/bin/bash', title: 'bash', renamed: false, createdAt: 1000 },
-      { id: 'b', shell: '/bin/zsh', title: 'zsh', renamed: false, createdAt: 2000 },
+      { id: 'a', shell: '/bin/bash', title: 'bash', renamed: false, pinned: false, createdAt: 1000, container: '' },
+      { id: 'b', shell: '/bin/zsh', title: 'zsh', renamed: false, pinned: false, createdAt: 2000, container: '' },
     ];
     const { result, rerender, deps } = await setupWithSessions(sessions);
 
@@ -216,8 +216,8 @@ describe('useLayout', () => {
 
   it('setActiveSession updates correct pane', async () => {
     const { result } = await setupWithSessions([
-      { id: 'a', shell: '/bin/bash', title: 'bash', renamed: false, createdAt: 1000 },
-      { id: 'b', shell: '/bin/zsh', title: 'zsh', renamed: false, createdAt: 2000 },
+      { id: 'a', shell: '/bin/bash', title: 'bash', renamed: false, pinned: false, createdAt: 1000, container: '' },
+      { id: 'b', shell: '/bin/zsh', title: 'zsh', renamed: false, pinned: false, createdAt: 2000, container: '' },
     ]);
 
     const paneId = (result.current.tree as any).paneId;
@@ -231,7 +231,7 @@ describe('useLayout', () => {
 
   it('new session created via server goes into focused pane', async () => {
     const sessions = [
-      { id: 'a', shell: '/bin/bash', title: 'bash', renamed: false, createdAt: 1000 },
+      { id: 'a', shell: '/bin/bash', title: 'bash', renamed: false, pinned: false, createdAt: 1000, container: '' },
     ];
     const { result, rerender, deps } = await setupWithSessions(sessions);
 
@@ -242,7 +242,7 @@ describe('useLayout', () => {
           ...deps,
           sessions: [
             ...sessions,
-            { id: 'c', shell: '/bin/bash', title: 'bash', renamed: false, createdAt: 3000 },
+            { id: 'c', shell: '/bin/bash', title: 'bash', renamed: false, pinned: false, createdAt: 3000, container: '' },
           ],
         },
       });
@@ -254,9 +254,9 @@ describe('useLayout', () => {
 
   it('closing a terminal tab preserves settings tab position in entries', async () => {
     const sessions = [
-      { id: 'a', shell: '/bin/bash', title: 'bash', renamed: false, createdAt: 1000 },
-      { id: 'b', shell: '/bin/zsh', title: 'zsh', renamed: false, createdAt: 2000 },
-      { id: 'c', shell: '/bin/zsh', title: 'zsh', renamed: false, createdAt: 3000 },
+      { id: 'a', shell: '/bin/bash', title: 'bash', renamed: false, pinned: false, createdAt: 1000, container: '' },
+      { id: 'b', shell: '/bin/zsh', title: 'zsh', renamed: false, pinned: false, createdAt: 2000, container: '' },
+      { id: 'c', shell: '/bin/zsh', title: 'zsh', renamed: false, pinned: false, createdAt: 3000, container: '' },
     ];
     const { result, rerender, deps } = await setupWithSessions(sessions);
 
@@ -286,8 +286,8 @@ describe('useLayout', () => {
 
   it('moveSettings moves settings tab from one pane to another', async () => {
     const { result } = await setupWithSessions([
-      { id: 'a', shell: '/bin/bash', title: 'bash', renamed: false, createdAt: 1000 },
-      { id: 'b', shell: '/bin/zsh', title: 'zsh', renamed: false, createdAt: 2000 },
+      { id: 'a', shell: '/bin/bash', title: 'bash', renamed: false, pinned: false, createdAt: 1000, container: '' },
+      { id: 'b', shell: '/bin/zsh', title: 'zsh', renamed: false, pinned: false, createdAt: 2000, container: '' },
     ]);
 
     const paneId = (result.current.tree as any).paneId;
@@ -328,8 +328,8 @@ describe('useLayout', () => {
 
   it('splitSettings creates a new pane with the settings tab via edge drop', async () => {
     const { result } = await setupWithSessions([
-      { id: 'a', shell: '/bin/bash', title: 'bash', renamed: false, createdAt: 1000 },
-      { id: 'b', shell: '/bin/zsh', title: 'zsh', renamed: false, createdAt: 2000 },
+      { id: 'a', shell: '/bin/bash', title: 'bash', renamed: false, pinned: false, createdAt: 1000, container: '' },
+      { id: 'b', shell: '/bin/zsh', title: 'zsh', renamed: false, pinned: false, createdAt: 2000, container: '' },
     ]);
 
     const paneId = (result.current.tree as any).paneId;
@@ -363,7 +363,7 @@ describe('useLayout', () => {
 
   it('createSplitSession creates a split and new session lands in new pane', async () => {
     const sessions = [
-      { id: 'a', shell: '/bin/bash', title: 'bash', renamed: false, createdAt: 1000 },
+      { id: 'a', shell: '/bin/bash', title: 'bash', renamed: false, pinned: false, createdAt: 1000, container: '' },
     ];
     const { result, rerender, deps } = await setupWithSessions(sessions);
 
@@ -391,7 +391,7 @@ describe('useLayout', () => {
           ...deps,
           sessions: [
             ...sessions,
-            { id: 'b', shell: '/bin/bash', title: 'bash', renamed: false, createdAt: 2000 },
+            { id: 'b', shell: '/bin/bash', title: 'bash', renamed: false, pinned: false, createdAt: 2000, container: '' },
           ],
         },
       });
@@ -404,7 +404,7 @@ describe('useLayout', () => {
 
   it('createSplitSession allows multiple nested splits', async () => {
     const sessions = [
-      { id: 'a', shell: '/bin/bash', title: 'bash', renamed: false, createdAt: 1000 },
+      { id: 'a', shell: '/bin/bash', title: 'bash', renamed: false, pinned: false, createdAt: 1000, container: '' },
     ];
     const { result, rerender, deps } = await setupWithSessions(sessions);
 
@@ -417,7 +417,7 @@ describe('useLayout', () => {
 
     const sessionsAfterFirst = [
       ...sessions,
-      { id: 'b', shell: '/bin/bash', title: 'bash', renamed: false, createdAt: 2000 },
+      { id: 'b', shell: '/bin/bash', title: 'bash', renamed: false, pinned: false, createdAt: 2000, container: '' },
     ];
     act(() => {
       rerender({ deps: { ...deps, sessions: sessionsAfterFirst } });
@@ -436,7 +436,7 @@ describe('useLayout', () => {
           ...deps,
           sessions: [
             ...sessionsAfterFirst,
-            { id: 'c', shell: '/bin/bash', title: 'bash', renamed: false, createdAt: 3000 },
+            { id: 'c', shell: '/bin/bash', title: 'bash', renamed: false, pinned: false, createdAt: 3000, container: '' },
           ],
         },
       });
@@ -448,8 +448,8 @@ describe('useLayout', () => {
 
   it('toggleZoom sets zoomedPaneId to focusedPaneId', async () => {
     const { result } = await setupWithSessions([
-      { id: 'a', shell: '/bin/bash', title: 'bash', renamed: false, createdAt: 1000 },
-      { id: 'b', shell: '/bin/zsh', title: 'zsh', renamed: false, createdAt: 2000 },
+      { id: 'a', shell: '/bin/bash', title: 'bash', renamed: false, pinned: false, createdAt: 1000, container: '' },
+      { id: 'b', shell: '/bin/zsh', title: 'zsh', renamed: false, pinned: false, createdAt: 2000, container: '' },
     ]);
 
     const paneId = (result.current.tree as any).paneId;
@@ -469,8 +469,8 @@ describe('useLayout', () => {
 
   it('toggleZoom clears zoomedPaneId when already zoomed', async () => {
     const { result } = await setupWithSessions([
-      { id: 'a', shell: '/bin/bash', title: 'bash', renamed: false, createdAt: 1000 },
-      { id: 'b', shell: '/bin/zsh', title: 'zsh', renamed: false, createdAt: 2000 },
+      { id: 'a', shell: '/bin/bash', title: 'bash', renamed: false, pinned: false, createdAt: 1000, container: '' },
+      { id: 'b', shell: '/bin/zsh', title: 'zsh', renamed: false, pinned: false, createdAt: 2000, container: '' },
     ]);
 
     const paneId = (result.current.tree as any).paneId;
@@ -492,7 +492,7 @@ describe('useLayout', () => {
 
   it('toggleZoom is no-op when only one pane exists', async () => {
     const { result } = await setupWithSessions([
-      { id: 'a', shell: '/bin/bash', title: 'bash', renamed: false, createdAt: 1000 },
+      { id: 'a', shell: '/bin/bash', title: 'bash', renamed: false, pinned: false, createdAt: 1000, container: '' },
     ]);
 
     act(() => {
@@ -504,7 +504,7 @@ describe('useLayout', () => {
 
   it('saves layout to localStorage on change', async () => {
     const sessions = [
-      { id: 'a', shell: '/bin/bash', title: 'bash', renamed: false, createdAt: 1000 },
+      { id: 'a', shell: '/bin/bash', title: 'bash', renamed: false, pinned: false, createdAt: 1000, container: '' },
     ];
     const { result } = await setupWithSessions(sessions);
 
@@ -518,7 +518,7 @@ describe('useLayout', () => {
 
   it('excludes settings entries from saved layout', async () => {
     const sessions = [
-      { id: 'a', shell: '/bin/bash', title: 'bash', renamed: false, createdAt: 1000 },
+      { id: 'a', shell: '/bin/bash', title: 'bash', renamed: false, pinned: false, createdAt: 1000, container: '' },
     ];
     const { result } = await setupWithSessions(sessions);
 
@@ -547,8 +547,8 @@ describe('useLayout', () => {
     localStorage.setItem('chemuxer-layout:v1', JSON.stringify(savedLayout));
 
     const sessions = [
-      { id: 'a', shell: '/bin/bash', title: 'bash', renamed: false, createdAt: 1000 },
-      { id: 'b', shell: '/bin/zsh', title: 'zsh', renamed: false, createdAt: 2000 },
+      { id: 'a', shell: '/bin/bash', title: 'bash', renamed: false, pinned: false, createdAt: 1000, container: '' },
+      { id: 'b', shell: '/bin/zsh', title: 'zsh', renamed: false, pinned: false, createdAt: 2000, container: '' },
     ];
     const deps = makeDeps(sessions);
     const { result } = renderHook(() => useLayout(deps));
@@ -581,7 +581,7 @@ describe('useLayout', () => {
     localStorage.setItem('chemuxer-layout:v1', JSON.stringify(savedLayout));
 
     const sessions = [
-      { id: 'new-x', shell: '/bin/bash', title: 'bash', renamed: false, createdAt: 1000 },
+      { id: 'new-x', shell: '/bin/bash', title: 'bash', renamed: false, pinned: false, createdAt: 1000, container: '' },
     ];
     const deps = makeDeps(sessions);
     const { result } = renderHook(() => useLayout(deps));
@@ -608,8 +608,8 @@ describe('useLayout', () => {
     localStorage.setItem('chemuxer-layout:v1', JSON.stringify(savedLayout));
 
     const sessions = [
-      { id: 'a', shell: '/bin/bash', title: 'bash', renamed: false, createdAt: 1000 },
-      { id: 'b', shell: '/bin/zsh', title: 'zsh', renamed: false, createdAt: 2000 },
+      { id: 'a', shell: '/bin/bash', title: 'bash', renamed: false, pinned: false, createdAt: 1000, container: '' },
+      { id: 'b', shell: '/bin/zsh', title: 'zsh', renamed: false, pinned: false, createdAt: 2000, container: '' },
     ];
     const deps = makeDeps(sessions);
     const { result } = renderHook(() => useLayout(deps));

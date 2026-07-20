@@ -7,11 +7,12 @@ export interface SessionInfo {
   renamed: boolean;
   pinned: boolean;
   createdAt: number;
+  container: string;
 }
 
 // Client → Server on control channel
 export type ClientControlMessage =
-  | { type: 'create' }
+  | { type: 'create'; container?: string }
   | { type: 'close'; sessionId: string }
   | { type: 'rename'; sessionId: string; title: string }
   | { type: 'pin'; sessionId: string; pinned: boolean };
@@ -34,7 +35,10 @@ export type ClientIOMessage =
 export function isClientControlMessage(msg: unknown): msg is ClientControlMessage {
   if (!msg || typeof msg !== 'object') return false;
   const m = msg as Record<string, unknown>;
-  if (m.type === 'create') return true;
+  if (m.type === 'create') {
+    if ('container' in m && typeof m.container !== 'string') return false;
+    return true;
+  }
   if (m.type === 'close') return typeof m.sessionId === 'string';
   if (m.type === 'rename') return typeof m.sessionId === 'string' && typeof m.title === 'string';
   if (m.type === 'pin') return typeof m.sessionId === 'string' && typeof m.pinned === 'boolean';
