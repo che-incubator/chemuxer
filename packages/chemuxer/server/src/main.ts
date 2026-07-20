@@ -6,6 +6,7 @@ import { SettingsManager } from './settings-manager.js';
 import { setupWebSocketServer } from './ws-handler.js';
 import { FeedCollector } from './feed-collector.js';
 import { createApiRouter } from './api-routes.js';
+import { ContainerDiscovery } from './container-discovery.js';
 
 const PORT = parseInt(process.env.PORT || '7681', 10);
 const HOST = process.env.HOST || '127.0.0.1';
@@ -26,6 +27,10 @@ const feedCollector = new FeedCollector(manager, {
   maxEntries: parseInt(process.env.FEED_MAX_ENTRIES ?? '', 10) || 60,
 });
 
+// Determine default container name from annotation or process container
+const defaultContainer = process.env.CHE_CONTAINER_NAME || 'chemuxer';
+const discovery = new ContainerDiscovery(defaultContainer);
+
 // Security headers — no new dependencies, no CSP (SPA inline scripts), no HSTS (gateway handles TLS)
 app.use((_req, res, next) => {
   res.setHeader('X-Frame-Options', 'DENY');
@@ -40,7 +45,7 @@ app.use(express.static(STATIC_DIR));
 
 app.get('/health', (_req, res) => res.json({ ok: true }));
 
-app.use(createApiRouter(manager, settingsManager, feedCollector, broadcastControl));
+app.use(createApiRouter(manager, settingsManager, feedCollector, broadcastControl, discovery));
 
 // SPA fallback — must come after API routes and agents.md
 app.get(/^(?!\/api\/)/, (_req, res) => {

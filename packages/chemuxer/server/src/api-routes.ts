@@ -6,6 +6,7 @@ import type { FeedCollector } from './feed-collector.js';
 import { stripAnsi } from './strip-ansi.js';
 import type { ServerControlMessage } from '@chemuxer/shared';
 import { loadDevfileCommands } from './devfile-commands.js';
+import type { ContainerDiscovery } from './container-discovery.js';
 
 const AGENTS_MD = `# Chemuxer — Agent Instructions
 
@@ -102,6 +103,7 @@ export function createApiRouter(
   settingsManager: SettingsManager,
   feedCollector: FeedCollector,
   broadcastControl: (data: ServerControlMessage) => void,
+  discovery: ContainerDiscovery,
 ): Router {
   const router = Router();
 
@@ -295,6 +297,12 @@ export function createApiRouter(
   // --- Devfile commands ---
   router.get('/api/devfile-commands', (_req, res) => {
     res.json(loadDevfileCommands());
+  });
+
+  // --- Containers ---
+  router.get('/api/containers', async (_req, res) => {
+    const containers = await discovery.getContainers();
+    res.json(containers);
   });
 
   return router;

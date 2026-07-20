@@ -18,6 +18,17 @@ function mockSettingsManager() {
   } as any;
 }
 
+function mockDiscovery() {
+  return {
+    getContainers: async () => [
+      { name: 'test-container', state: 'running' as const, ready: true, isDefault: true },
+    ],
+    getDefaultContainerName: () => 'test-container',
+    getPodName: () => 'test-pod',
+    getNamespace: () => 'test-namespace',
+  } as any;
+}
+
 describe('API Routes', { timeout: 30000 }, () => {
   let server: http.Server;
   let manager: SessionManager;
@@ -37,7 +48,7 @@ describe('API Routes', { timeout: 30000 }, () => {
 
     const app = express();
     app.use(express.json());
-    app.use(createApiRouter(manager, mockSettingsManager(), feedCollector, broadcastControl));
+    app.use(createApiRouter(manager, mockSettingsManager(), feedCollector, broadcastControl, mockDiscovery()));
 
     server = http.createServer(app);
     await new Promise<void>(resolve => server.listen(0, resolve));
