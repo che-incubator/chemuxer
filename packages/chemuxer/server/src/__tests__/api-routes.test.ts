@@ -41,7 +41,7 @@ describe('API Routes', { timeout: 30000 }, () => {
     broadcasts = [];
     mockWrite = vi.fn();
     vi.spyOn(Session.prototype, 'write').mockImplementation(mockWrite);
-    manager = new SessionManager(mockSettingsManager());
+    manager = new SessionManager(mockSettingsManager(), mockDiscovery());
     feedCollector = new FeedCollector(manager, { intervalMs: 60000, maxEntries: 10 });
     const broadcastControl = (data: object) => { broadcasts.push(data); };
     manager.setBroadcastControl(broadcastControl);

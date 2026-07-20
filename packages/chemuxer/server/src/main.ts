@@ -15,9 +15,13 @@ const STATIC_DIR = process.env.STATIC_DIR || path.resolve(__dirname, '../client'
 const configPath = path.join(process.cwd(), 'config', 'settings.json');
 const settingsManager = new SettingsManager(configPath);
 
+// Determine default container name from annotation or process container
+const defaultContainer = process.env.CHE_CONTAINER_NAME || 'chemuxer';
+const discovery = new ContainerDiscovery(defaultContainer);
+
 const app = express();
 const server = http.createServer(app);
-const manager = new SessionManager(settingsManager);
+const manager = new SessionManager(settingsManager, discovery);
 
 const { broadcastControl } = setupWebSocketServer(server, manager, settingsManager);
 manager.setBroadcastControl(broadcastControl);
@@ -26,10 +30,6 @@ const feedCollector = new FeedCollector(manager, {
   intervalMs: parseInt(process.env.FEED_INTERVAL_MS ?? '', 10) || 60000,
   maxEntries: parseInt(process.env.FEED_MAX_ENTRIES ?? '', 10) || 60,
 });
-
-// Determine default container name from annotation or process container
-const defaultContainer = process.env.CHE_CONTAINER_NAME || 'chemuxer';
-const discovery = new ContainerDiscovery(defaultContainer);
 
 // Security headers — no new dependencies, no CSP (SPA inline scripts), no HSTS (gateway handles TLS)
 app.use((_req, res, next) => {

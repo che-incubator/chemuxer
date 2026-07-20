@@ -2,6 +2,7 @@ import { describe, it, expect, afterEach, vi } from 'vitest';
 import { SessionManager, resolveShell } from '../session-manager.js';
 import { DEFAULT_SETTINGS, type Settings } from '@chemuxer/shared';
 import type { SettingsManager } from '../settings-manager.js';
+import type { ContainerDiscovery } from '../container-discovery.js';
 
 type ChangeCallback = (settings: Settings) => void;
 
@@ -22,6 +23,15 @@ function mockSettingsManager(initial: Settings = DEFAULT_SETTINGS): SettingsMana
   } as any;
 }
 
+function mockDiscovery(defaultContainer = 'default-container'): ContainerDiscovery {
+  return {
+    getDefaultContainerName: () => defaultContainer,
+    getNamespace: () => 'test-namespace',
+    getPodName: () => 'test-pod',
+    getContainers: async () => [],
+  } as any;
+}
+
 describe('SessionManager', () => {
   let manager: SessionManager | undefined;
 
@@ -30,26 +40,26 @@ describe('SessionManager', () => {
   });
 
   it('createSession spawns a session and adds it to the map', () => {
-    manager = new SessionManager(mockSettingsManager());
+    manager = new SessionManager(mockSettingsManager(), mockDiscovery());
     const session = manager.createSession();
     expect(session.id).toBeTruthy();
     expect(manager.getSession(session.id)).toBe(session);
   });
 
   it('getSession returns undefined for unknown ID', () => {
-    manager = new SessionManager(mockSettingsManager());
+    manager = new SessionManager(mockSettingsManager(), mockDiscovery());
     expect(manager.getSession('nonexistent')).toBeUndefined();
   });
 
   it('listSessions returns all sessions', () => {
-    manager = new SessionManager(mockSettingsManager());
+    manager = new SessionManager(mockSettingsManager(), mockDiscovery());
     manager.createSession();
     manager.createSession();
     expect(manager.listSessions()).toHaveLength(2);
   });
 
   it('closeSession removes session from map and cleans up', () => {
-    manager = new SessionManager(mockSettingsManager());
+    manager = new SessionManager(mockSettingsManager(), mockDiscovery());
     const session = manager.createSession();
     manager.closeSession(session.id);
     expect(manager.getSession(session.id)).toBeUndefined();
@@ -57,7 +67,7 @@ describe('SessionManager', () => {
   });
 
   it('closeAll cleans up all sessions', () => {
-    manager = new SessionManager(mockSettingsManager());
+    manager = new SessionManager(mockSettingsManager(), mockDiscovery());
     manager.createSession();
     manager.createSession();
     manager.closeAll();
@@ -70,7 +80,7 @@ describe('SessionManager', () => {
       ...DEFAULT_SETTINGS,
       shell: { path: '/tmp/evil-script' },
     };
-    manager = new SessionManager(mockSettingsManager(settings));
+    manager = new SessionManager(mockSettingsManager(settings), mockDiscovery());
     const session = manager.createSession();
     expect(session.shell).not.toBe('/tmp/evil-script');
   });
@@ -97,7 +107,7 @@ describe('SessionManager', () => {
 
   it('new sessions use updated settings after change', () => {
     const mock = mockSettingsManager();
-    manager = new SessionManager(mock);
+    manager = new SessionManager(mock, mockDiscovery());
 
     const updatedSettings: Settings = {
       ...DEFAULT_SETTINGS,
@@ -109,21 +119,33 @@ describe('SessionManager', () => {
     expect(session).toBeTruthy();
   });
 
+  it('createSession without container uses local PTY', () => {
+    manager = new SessionManager(mockSettingsManager(), mockDiscovery());
+    const session = manager.createSession();
+    expect(session.container).toBe('default-container');
+  });
+
+  it('createSession with default container name uses local PTY', () => {
+    manager = new SessionManager(mockSettingsManager(), mockDiscovery());
+    const session = manager.createSession({ container: 'default-container' });
+    expect(session.container).toBe('default-container');
+  });
+
   describe('pinning', () => {
     it('pinSession returns true and updates session', () => {
-      manager = new SessionManager(mockSettingsManager());
+      manager = new SessionManager(mockSettingsManager(), mockDiscovery());
       const session = manager.createSession();
       expect(manager.pinSession(session.id, true)).toBe(true);
       expect(manager.getSession(session.id)!.pinned).toBe(true);
     });
 
     it('pinSession returns false for unknown session', () => {
-      manager = new SessionManager(mockSettingsManager());
+      manager = new SessionManager(mockSettingsManager(), mockDiscovery());
       expect(manager.pinSession('nonexistent', true)).toBe(false);
     });
 
     it('closeSession rejects pinned session without force', () => {
-      manager = new SessionManager(mockSettingsManager());
+      manager = new SessionManager(mockSettingsManager(), mockDiscovery());
       const session = manager.createSession();
       manager.pinSession(session.id, true);
       expect(manager.closeSession(session.id)).toBe('pinned');
@@ -131,7 +153,7 @@ describe('SessionManager', () => {
     });
 
     it('closeSession with force closes pinned session', () => {
-      manager = new SessionManager(mockSettingsManager());
+      manager = new SessionManager(mockSettingsManager(), mockDiscovery());
       const session = manager.createSession();
       manager.pinSession(session.id, true);
       expect(manager.closeSession(session.id, true)).toBe('closed');
@@ -139,12 +161,12 @@ describe('SessionManager', () => {
     });
 
     it('closeSession returns not_found for unknown session', () => {
-      manager = new SessionManager(mockSettingsManager());
+      manager = new SessionManager(mockSettingsManager(), mockDiscovery());
       expect(manager.closeSession('nonexistent')).toBe('not_found');
     });
 
     it('process exit bypasses pin', async () => {
-      manager = new SessionManager(mockSettingsManager());
+      manager = new SessionManager(mockSettingsManager(), mockDiscovery());
       const session = manager.createSession();
       const sessionId = session.id;
       manager.pinSession(sessionId, true);

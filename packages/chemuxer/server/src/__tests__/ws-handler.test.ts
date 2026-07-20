@@ -37,6 +37,15 @@ function connectControl(server: http.Server): Promise<{ ws: WebSocket; initial: 
   });
 }
 
+function mockDiscovery() {
+  return {
+    getDefaultContainerName: () => 'default-container',
+    getNamespace: () => 'test-namespace',
+    getPodName: () => 'test-pod',
+    getContainers: async () => [],
+  } as any;
+}
+
 describe('WebSocket Handler', { timeout: 30000 }, () => {
   let server: http.Server;
   let manager: SessionManager;
@@ -50,7 +59,7 @@ describe('WebSocket Handler', { timeout: 30000 }, () => {
       writeSettings: () => DEFAULT_SETTINGS,
       writeSettingsRaw: () => DEFAULT_SETTINGS,
     };
-    manager = new SessionManager(mockSettingsManager as any);
+    manager = new SessionManager(mockSettingsManager as any, mockDiscovery());
     const app = express();
     server = http.createServer(app);
     const { broadcastControl } = setupWebSocketServer(server, manager, mockSettingsManager as any);
