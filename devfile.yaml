@@ -8,13 +8,19 @@ attributes:
 components:
   - name: chemuxer
     container:
-      image: quay.io/devfile/universal-developer-image:ubi9-latest
+      image: registry.access.redhat.com/ubi9/nodejs-22:latest
       memoryRequest: 512Mi
       memoryLimit: 1Gi
       command: ["/bin/bash", "-c"]
       args:
         - |
+          if ! whoami &>/dev/null; then
+            echo "user:x:$(id -u):0:user:/home/user:/bin/bash" >> /etc/passwd
+          fi
+          export HOME=/home/user
+          cd $HOME
           export STATIC_DIR=/chemuxer-vol/dist/client
+          while [ ! -f /chemuxer-vol/dist/server/server.js ]; do sleep 1; done
           exec node /chemuxer-vol/dist/server/server.js
       endpoints:
         - name: chemuxer
