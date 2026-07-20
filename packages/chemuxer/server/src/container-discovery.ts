@@ -1,5 +1,6 @@
 // packages/chemuxer/server/src/container-discovery.ts
-import { KubeConfig, CoreV1Api } from '@kubernetes/client-node';
+import fs from 'fs';
+import { KubeConfig, CoreV1Api, V1ContainerStatus } from '@kubernetes/client-node';
 import type { ContainerInfo, ContainerState } from '@chemuxer/shared';
 
 export class ContainerDiscovery {
@@ -24,7 +25,6 @@ export class ContainerDiscovery {
 
   private readNamespaceFile(): string {
     try {
-      const fs = require('fs');
       return fs.readFileSync('/var/run/secrets/kubernetes.io/serviceaccount/namespace', 'utf8').trim();
     } catch {
       return 'default';
@@ -60,7 +60,7 @@ export class ContainerDiscovery {
     }
   }
 
-  private resolveState(status: any): ContainerState {
+  private resolveState(status: V1ContainerStatus | undefined): ContainerState {
     if (!status?.state) return 'waiting';
     if (status.state.running) return 'running';
     if (status.state.terminated) return 'terminated';
