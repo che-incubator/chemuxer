@@ -88,6 +88,10 @@ export function Terminal({ sessionId, wsUrl, visible, settings }: TerminalProps)
       }
     });
 
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: 'resize', cols: term.cols, rows: term.rows }));
+    }
+
     return () => {
       onData.dispose();
       onResize.dispose();
