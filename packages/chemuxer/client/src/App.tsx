@@ -139,6 +139,8 @@ export function App() {
     }
   }, []);
 
+  const defaultContainer = containers.find(c => c.isDefault)?.name;
+
   return (
     <DragProvider>
       <div className="app">
@@ -168,6 +170,7 @@ export function App() {
             onRenameCancel={handleRenameCancel}
             renamingSessionId={renamingSessionId}
             onContextSplit={handleContextSplit}
+            defaultContainer={defaultContainer}
           />
         </div>
         <CommandPalette
