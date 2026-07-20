@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach, beforeEach } from 'vitest';
+import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
 import http from 'http';
 import WebSocket from 'ws';
 import express from 'express';
@@ -363,6 +363,17 @@ describe('WebSocket Handler', { timeout: 30000 }, () => {
 
     // Verify session still exists
     expect(manager.getSession(session.id)).toBeTruthy();
+    ws.close();
+  });
+
+  it('control: passes container field from create message to session manager', async () => {
+    const { ws } = await connectControl(server);
+    const createSpy = vi.spyOn(manager, 'createSession');
+
+    ws.send(JSON.stringify({ type: 'create', container: 'sidecar-tools' }));
+    await waitForMessage(ws); // wait for session-created
+
+    expect(createSpy).toHaveBeenCalledWith({ container: 'sidecar-tools' });
     ws.close();
   });
 });

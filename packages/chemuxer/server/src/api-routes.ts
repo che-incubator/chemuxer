@@ -148,7 +148,7 @@ export function createApiRouter(
   });
 
   router.post('/api/sessions', (req, res, next) => {
-    const { pinned, devfileCommandId } = req.body || {};
+    const { pinned, devfileCommandId, container } = req.body || {};
 
     // Handle devfile command execution
     if (devfileCommandId) {
@@ -163,7 +163,7 @@ export function createApiRouter(
         }
 
         // Create session
-        const session = manager.createSession();
+        const session = manager.createSession(command.component ? { container: command.component } : undefined);
 
         // Generate title: group: label or task: label
         const prefix = command.group || 'task';
@@ -201,7 +201,7 @@ export function createApiRouter(
     // Regular session creation (existing code path)
     let session;
     try {
-      session = manager.createSession();
+      session = manager.createSession(container ? { container } : undefined);
     } catch (err) {
       if (err instanceof SessionLimitError) {
         res.status(429).json({ error: 'Maximum session limit reached' });
