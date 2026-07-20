@@ -225,7 +225,7 @@ describe('useCommands', () => {
     expect(deps.toggleZoom).toHaveBeenCalled();
   });
 
-  it('shows container sub-menu when multiple containers exist', () => {
+  it('adds per-container commands when multiple containers exist', () => {
     const deps = mockDeps({
       containers: [
         { name: 'dev', state: 'running', ready: true, isDefault: true },
@@ -235,12 +235,57 @@ describe('useCommands', () => {
     const commands = useCommands(deps, DEFAULT_SETTINGS, vi.fn());
 
     const newTerminal = commands.find(c => c.id === 'new-terminal');
-    expect(newTerminal?.children).toHaveLength(2);
-    expect(newTerminal?.children?.[0].label).toBe('dev (default)');
-    expect(newTerminal?.children?.[1].label).toBe('tools');
+    expect(newTerminal?.label).toBe('New Terminal');
+    expect(newTerminal?.action).toBeDefined();
+    expect(newTerminal?.children).toBeUndefined();
+
+    const toolsCmd = commands.find(c => c.id === 'new-terminal-tools');
+    expect(toolsCmd?.label).toBe('New Terminal in Container: tools');
+    expect(toolsCmd?.action).toBeDefined();
   });
 
-  it('skips sub-menu with single container', () => {
+  it('per-container command calls createSession with container name', () => {
+    const deps = mockDeps({
+      containers: [
+        { name: 'dev', state: 'running', ready: true, isDefault: true },
+        { name: 'tools', state: 'running', ready: true, isDefault: false },
+      ],
+    });
+    const commands = useCommands(deps, DEFAULT_SETTINGS, vi.fn());
+
+    const toolsCmd = commands.find(c => c.id === 'new-terminal-tools')!;
+    toolsCmd.action!();
+    expect(deps.createSession).toHaveBeenCalledWith('tools');
+  });
+
+  it('New Terminal calls createSession without container (default)', () => {
+    const deps = mockDeps({
+      containers: [
+        { name: 'dev', state: 'running', ready: true, isDefault: true },
+        { name: 'tools', state: 'running', ready: true, isDefault: false },
+      ],
+    });
+    const commands = useCommands(deps, DEFAULT_SETTINGS, vi.fn());
+
+    const newTerminal = commands.find(c => c.id === 'new-terminal')!;
+    newTerminal.action!();
+    expect(deps.createSession).toHaveBeenCalledWith();
+  });
+
+  it('disables per-container command when container is not running', () => {
+    const deps = mockDeps({
+      containers: [
+        { name: 'dev', state: 'running', ready: true, isDefault: true },
+        { name: 'tools', state: 'waiting', ready: false, isDefault: false },
+      ],
+    });
+    const commands = useCommands(deps, DEFAULT_SETTINGS, vi.fn());
+
+    const toolsCmd = commands.find(c => c.id === 'new-terminal-tools');
+    expect(toolsCmd?.disabled).toBe(true);
+  });
+
+  it('no per-container commands with single container', () => {
     const deps = mockDeps({
       containers: [
         { name: 'dev', state: 'running', ready: true, isDefault: true },
@@ -249,7 +294,7 @@ describe('useCommands', () => {
     const commands = useCommands(deps, DEFAULT_SETTINGS, vi.fn());
 
     const newTerminal = commands.find(c => c.id === 'new-terminal');
-    expect(newTerminal?.children).toBeUndefined();
     expect(newTerminal?.action).toBeDefined();
+    expect(commands.find(c => c.id.startsWith('new-terminal-'))).toBeUndefined();
   });
 });

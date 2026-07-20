@@ -41,23 +41,21 @@ export function useCommands(
 
   const zoomed = !!zoomedPaneId;
 
+  const nonDefaultContainers = deps.containers.filter(c => !c.isDefault);
+
   return [
     {
       id: 'new-terminal',
       label: 'New Terminal',
       disabled: zoomed,
-      ...(deps.containers.length > 1
-        ? {
-            children: deps.containers.map(c => ({
-              id: `new-terminal-${c.name}`,
-              label: `${c.name}${c.isDefault ? ' (default)' : ''}`,
-              disabled: c.state !== 'running',
-              action: () => createSession(c.name),
-            })),
-          }
-        : { action: () => createSession() }
-      ),
+      action: () => createSession(),
     },
+    ...nonDefaultContainers.map(c => ({
+      id: `new-terminal-${c.name}`,
+      label: `New Terminal in Container: ${c.name}`,
+      disabled: zoomed || c.state !== 'running',
+      action: () => createSession(c.name),
+    })),
     {
       id: 'rename-terminal',
       label: 'Rename Terminal',
