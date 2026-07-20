@@ -1,7 +1,9 @@
 import fs from 'fs';
-import { Session } from './session.js';
+import { Session, type ISession } from './session.js';
+import { K8sExecSession } from './k8s-exec-session.js';
 import type { SessionInfo, ServerControlMessage } from '@chemuxer/shared';
 import type { SettingsManager } from './settings-manager.js';
+import type { ContainerDiscovery } from './container-discovery.js';
 
 function getValidShells(): Set<string> {
   try {
@@ -48,15 +50,17 @@ export class SessionLimitError extends Error {
 }
 
 export class SessionManager {
-  private sessions = new Map<string, Session>();
+  private sessions = new Map<string, ISession>();
   private shell: string;
   private scrollbackLines: number;
   private broadcastControl?: (data: ServerControlMessage) => void;
+  private discovery: ContainerDiscovery;
 
-  constructor(settingsManager: SettingsManager) {
+  constructor(settingsManager: SettingsManager, discovery: ContainerDiscovery) {
     const settings = settingsManager.getSettings();
     this.shell = resolveShell(settings.shell.path);
     this.scrollbackLines = settings.scrollback.lines;
+    this.discovery = discovery;
 
     settingsManager.onChange((updated) => {
       try {
@@ -72,11 +76,32 @@ export class SessionManager {
     this.broadcastControl = fn;
   }
 
-  createSession(): Session {
+  createSession(options?: { container?: string }): ISession {
     if (this.sessions.size >= MAX_SESSIONS) {
       throw new SessionLimitError();
     }
-    const session = new Session(this.shell, { scrollbackLines: this.scrollbackLines });
+
+    const container = options?.container ?? this.discovery.getDefaultContainerName();
+    const isLocalSession = container === this.discovery.getDefaultContainerName();
+
+    let session: ISession;
+    if (isLocalSession) {
+      session = new Session(this.shell, container, { scrollbackLines: this.scrollbackLines });
+    } else {
+      const k8sSession = new K8sExecSession({
+        container,
+        shell: this.shell,
+        namespace: this.discovery.getNamespace(),
+        podName: this.discovery.getPodName(),
+        scrollbackLines: this.scrollbackLines,
+      });
+      // Connect is async, but we don't await here - session starts connecting in background
+      k8sSession.connect().catch(err => {
+        console.error(`[SessionManager] K8s session ${k8sSession.id} connect failed:`, err);
+      });
+      session = k8sSession;
+    }
+
     this.sessions.set(session.id, session);
 
     session.onExit((exitCode) => {
@@ -90,7 +115,7 @@ export class SessionManager {
     return session;
   }
 
-  getSession(id: string): Session | undefined {
+  getSession(id: string): ISession | undefined {
     return this.sessions.get(id);
   }
 

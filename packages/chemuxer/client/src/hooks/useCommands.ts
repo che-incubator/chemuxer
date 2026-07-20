@@ -1,5 +1,5 @@
 import type { Pane, DropZone } from '../types/layout.js';
-import { THEMES, type Settings, type ThemeName } from '@chemuxer/shared';
+import { THEMES, type Settings, type ThemeName, type ContainerInfo } from '@chemuxer/shared';
 
 export interface Command {
   id: string;
@@ -13,11 +13,12 @@ export interface CommandDeps {
   panes: Record<string, Pane>;
   focusedPaneId: string | null;
   zoomedPaneId: string | null;
-  createSession: () => void;
+  createSession: (container?: string) => void;
   closeSession: (id: string) => void;
   openSettings: () => void;
   toggleZoom: () => void;
   createSplitSession: (targetPaneId: string, zone: DropZone) => void;
+  containers: ContainerInfo[];
 }
 
 interface CommandOptions {
@@ -40,6 +41,8 @@ export function useCommands(
 
   const zoomed = !!zoomedPaneId;
 
+  const nonDefaultContainers = deps.containers.filter(c => !c.isDefault);
+
   return [
     {
       id: 'new-terminal',
@@ -47,6 +50,12 @@ export function useCommands(
       disabled: zoomed,
       action: () => createSession(),
     },
+    ...nonDefaultContainers.map(c => ({
+      id: `new-terminal-${c.name}`,
+      label: `New Terminal in Container: ${c.name}`,
+      disabled: zoomed || c.state !== 'running',
+      action: () => createSession(c.name),
+    })),
     {
       id: 'rename-terminal',
       label: 'Rename Terminal',

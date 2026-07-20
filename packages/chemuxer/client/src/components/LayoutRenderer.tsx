@@ -30,6 +30,7 @@ interface LayoutRendererProps {
   onRenameCancel?: () => void;
   renamingSessionId?: string | null;
   onContextSplit?: (sessionId: string, zone: DropZone) => void;
+  defaultContainer?: string;
 }
 
 export function LayoutRenderer({
@@ -56,8 +57,9 @@ export function LayoutRenderer({
   onRenameCancel,
   renamingSessionId,
   onContextSplit,
+  defaultContainer,
 }: LayoutRendererProps) {
-  const sharedProps = { panes, sessions, wsUrl, settings, zoomedPaneId, onSelectSession, onCloseSession, onCreateSession, onPinSession, onSplit, onMoveTab, onFocus, onSaveSettings, onSelectSettings, onMoveSettings, onSplitSettings, onCloseSettings, onRenameRequest, onRenameConfirm, onRenameCancel, renamingSessionId, onContextSplit, zoomed: !!zoomedPaneId };
+  const sharedProps = { panes, sessions, wsUrl, settings, zoomedPaneId, onSelectSession, onCloseSession, onCreateSession, onPinSession, onSplit, onMoveTab, onFocus, onSaveSettings, onSelectSettings, onMoveSettings, onSplitSettings, onCloseSettings, onRenameRequest, onRenameConfirm, onRenameCancel, renamingSessionId, onContextSplit, defaultContainer, zoomed: !!zoomedPaneId };
 
   if (zoomedPaneId) {
     const pane = panes[zoomedPaneId];
@@ -85,6 +87,7 @@ export function LayoutRenderer({
         onRenameCancel={onRenameCancel}
         renamingSessionId={renamingSessionId}
         onContextSplit={onContextSplit}
+        defaultContainer={defaultContainer}
         zoomed={!!zoomedPaneId}
       />
     );
@@ -116,6 +119,7 @@ export function LayoutRenderer({
         onRenameCancel={onRenameCancel}
         renamingSessionId={renamingSessionId}
         onContextSplit={onContextSplit}
+        defaultContainer={defaultContainer}
       />
     );
   }

@@ -69,7 +69,7 @@ describe('useControl', () => {
     const ws = MockWebSocket.instances[0];
 
     const sessions: SessionInfo[] = [
-      { id: 'a', shell: '/bin/bash', title: 'bash', renamed: false, createdAt: 1000 },
+      { id: 'a', shell: '/bin/bash', title: 'bash', renamed: false, pinned: false, createdAt: 1000, container: '' },
     ];
 
     act(() => {
@@ -87,7 +87,7 @@ describe('useControl', () => {
       ws.simulateMessage({ type: 'sessions', sessions: [] });
     });
 
-    const newSession: SessionInfo = { id: 'b', shell: '/bin/bash', title: 'bash', renamed: false, createdAt: 2000 };
+    const newSession: SessionInfo = { id: 'b', shell: '/bin/bash', title: 'bash', renamed: false, pinned: false, createdAt: 2000, container: '' };
 
     act(() => {
       ws.simulateMessage({ type: 'session-created', session: newSession });
@@ -102,8 +102,8 @@ describe('useControl', () => {
     const ws = MockWebSocket.instances[0];
 
     const sessions: SessionInfo[] = [
-      { id: 'a', shell: '/bin/bash', title: 'bash', renamed: false, createdAt: 1000 },
-      { id: 'b', shell: '/bin/zsh', title: 'zsh', renamed: false, createdAt: 2000 },
+      { id: 'a', shell: '/bin/bash', title: 'bash', renamed: false, pinned: false, createdAt: 1000, container: '' },
+      { id: 'b', shell: '/bin/zsh', title: 'zsh', renamed: false, pinned: false, createdAt: 2000, container: '' },
     ];
 
     act(() => {
@@ -157,7 +157,7 @@ describe('useControl', () => {
 
     act(() => {
       ws.simulateMessage({ type: 'sessions', sessions: [
-        { id: 'a', shell: '/bin/zsh', title: 'zsh', renamed: false, createdAt: 1000 },
+        { id: 'a', shell: '/bin/zsh', title: 'zsh', renamed: false, pinned: false, createdAt: 1000, container: '' },
       ] });
     });
 

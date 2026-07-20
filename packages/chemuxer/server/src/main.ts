@@ -6,6 +6,7 @@ import { SettingsManager } from './settings-manager.js';
 import { setupWebSocketServer } from './ws-handler.js';
 import { FeedCollector } from './feed-collector.js';
 import { createApiRouter } from './api-routes.js';
+import { ContainerDiscovery } from './container-discovery.js';
 
 const PORT = parseInt(process.env.PORT || '7681', 10);
 const HOST = process.env.HOST || '127.0.0.1';
@@ -14,9 +15,13 @@ const STATIC_DIR = process.env.STATIC_DIR || path.resolve(__dirname, '../client'
 const configPath = path.join(process.cwd(), 'config', 'settings.json');
 const settingsManager = new SettingsManager(configPath);
 
+// Determine default container name from annotation or process container
+const defaultContainer = process.env.CHE_CONTAINER_NAME || 'chemuxer';
+const discovery = new ContainerDiscovery(defaultContainer);
+
 const app = express();
 const server = http.createServer(app);
-const manager = new SessionManager(settingsManager);
+const manager = new SessionManager(settingsManager, discovery);
 
 const { broadcastControl } = setupWebSocketServer(server, manager, settingsManager);
 manager.setBroadcastControl(broadcastControl);
@@ -40,7 +45,7 @@ app.use(express.static(STATIC_DIR));
 
 app.get('/health', (_req, res) => res.json({ ok: true }));
 
-app.use(createApiRouter(manager, settingsManager, feedCollector, broadcastControl));
+app.use(createApiRouter(manager, settingsManager, feedCollector, broadcastControl, discovery));
 
 // SPA fallback — must come after API routes and agents.md
 app.get(/^(?!\/api\/)/, (_req, res) => {

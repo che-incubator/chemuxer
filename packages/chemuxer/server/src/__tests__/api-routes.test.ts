@@ -18,6 +18,17 @@ function mockSettingsManager() {
   } as any;
 }
 
+function mockDiscovery() {
+  return {
+    getContainers: async () => [
+      { name: 'test-container', state: 'running' as const, ready: true, isDefault: true },
+    ],
+    getDefaultContainerName: () => 'test-container',
+    getPodName: () => 'test-pod',
+    getNamespace: () => 'test-namespace',
+  } as any;
+}
+
 describe('API Routes', { timeout: 30000 }, () => {
   let server: http.Server;
   let manager: SessionManager;
@@ -30,14 +41,14 @@ describe('API Routes', { timeout: 30000 }, () => {
     broadcasts = [];
     mockWrite = vi.fn();
     vi.spyOn(Session.prototype, 'write').mockImplementation(mockWrite);
-    manager = new SessionManager(mockSettingsManager());
+    manager = new SessionManager(mockSettingsManager(), mockDiscovery());
     feedCollector = new FeedCollector(manager, { intervalMs: 60000, maxEntries: 10 });
     const broadcastControl = (data: object) => { broadcasts.push(data); };
     manager.setBroadcastControl(broadcastControl);
 
     const app = express();
     app.use(express.json());
-    app.use(createApiRouter(manager, mockSettingsManager(), feedCollector, broadcastControl));
+    app.use(createApiRouter(manager, mockSettingsManager(), feedCollector, broadcastControl, mockDiscovery()));
 
     server = http.createServer(app);
     await new Promise<void>(resolve => server.listen(0, resolve));
@@ -401,17 +412,18 @@ describe('API Routes', { timeout: 30000 }, () => {
 
   describe('POST /api/sessions with devfileCommandId', () => {
     beforeEach(() => {
+      // Mock devfile commands to use 'test-container' which matches mockDiscovery's default
       vi.spyOn(devfileCommandsModule, 'loadDevfileCommands').mockReturnValue([
         {
           id: 'build-app',
           label: 'Build Application',
-          component: 'tools',
+          component: 'test-container',
           commandLine: 'npm run build',
           group: 'build',
         },
         {
           id: 'test-unit',
-          component: 'tools',
+          component: 'test-container',
           commandLine: 'npm test',
           workingDir: '/projects/app',
           group: 'test',
@@ -473,7 +485,7 @@ describe('API Routes', { timeout: 30000 }, () => {
         {
           id: 'custom-cmd',
           label: 'Custom Command',
-          component: 'tools',
+          component: 'test-container',
           commandLine: 'echo hello',
         },
       ]);
@@ -487,6 +499,51 @@ describe('API Routes', { timeout: 30000 }, () => {
       const body = await res.json();
 
       expect(body.title).toBe('task: Custom Command');
+    });
+  });
+
+  describe('POST /api/sessions with container parameter', () => {
+    it('should pass container to createSession for regular session', async () => {
+      const createSpy = vi.spyOn(manager, 'createSession');
+      const res = await fetch(`${baseUrl}/api/sessions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ container: 'sidecar-tools' }),
+      });
+      expect(res.status).toBe(201);
+      expect(createSpy).toHaveBeenCalledWith({ container: 'sidecar-tools' });
+    });
+
+    it('should pass component as container for devfile command', async () => {
+      vi.spyOn(devfileCommandsModule, 'loadDevfileCommands').mockReturnValue([
+        {
+          id: 'build-app',
+          label: 'Build Application',
+          component: 'test-container',
+          commandLine: 'npm run build',
+          group: 'build',
+        },
+      ]);
+
+      const createSpy = vi.spyOn(manager, 'createSession');
+      const res = await fetch(`${baseUrl}/api/sessions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ devfileCommandId: 'build-app' }),
+      });
+      expect(res.status).toBe(201);
+      expect(createSpy).toHaveBeenCalledWith({ container: 'test-container' });
+    });
+
+    it('should call createSession without options when no container specified', async () => {
+      const createSpy = vi.spyOn(manager, 'createSession');
+      const res = await fetch(`${baseUrl}/api/sessions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      expect(res.status).toBe(201);
+      expect(createSpy).toHaveBeenCalledWith(undefined);
     });
   });
 });

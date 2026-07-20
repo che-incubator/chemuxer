@@ -127,7 +127,7 @@ export function setupWebSocketServer(
 
       if (msg.type === 'create') {
         try {
-          mgr.createSession();
+          mgr.createSession(msg.container ? { container: msg.container } : undefined);
         } catch (err) {
           if (err instanceof SessionLimitError) {
             ws.send(JSON.stringify({ type: 'error', error: 'Maximum session limit reached' }));

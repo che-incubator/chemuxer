@@ -22,6 +22,7 @@ interface PaneTabBarProps {
   onRenameConfirm?: (sessionId: string, title: string) => void;
   onRenameCancel?: () => void;
   zoomed?: boolean;
+  defaultContainer?: string;
 }
 
 interface ContextMenuState {
@@ -87,6 +88,7 @@ export function PaneTabBar({
   onRenameConfirm,
   onRenameCancel,
   zoomed,
+  defaultContainer,
 }: PaneTabBarProps) {
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
 
@@ -133,7 +135,12 @@ export function PaneTabBar({
               ) : (
                 <>
                   {session.pinned && <span className="tab-pin-icon" title="Pinned">📌</span>}
-                  <span className="tab-title">{session.renamed ? session.title : `${session.title} — ${entry.tabNumber}`}</span>
+                  <span className="tab-title">
+                    {session.renamed ? session.title : `${session.title} — ${entry.tabNumber}`}
+                    {defaultContainer && session.container && session.container !== defaultContainer && (
+                      <> [{session.container}]</>
+                    )}
+                  </span>
                   {!zoomed && (
                     <span
                       className="tab-close"
