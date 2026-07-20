@@ -4,7 +4,7 @@ import type { SessionInfo, ServerControlMessage } from '@chemuxer/shared';
 
 export interface ControlState {
   sessions: SessionInfo[];
-  createSession: () => void;
+  createSession: (container?: string) => void;
   closeSession: (id: string, force?: boolean) => void;
   renameSession: (id: string, title: string) => void;
   pinSession: (id: string, pinned: boolean) => void;
@@ -57,7 +57,10 @@ export function useControl(url: string, options?: ControlOptions): ControlState 
     }
   }, [connState]);
 
-  const createSession = useCallback(() => send({ type: 'create' }), [send]);
+  const createSession = useCallback(
+    (container?: string) => send({ type: 'create', ...(container && { container }) }),
+    [send],
+  );
   const closeSession = useCallback((id: string, force?: boolean) => {
     if (force) {
       send({ type: 'pin', sessionId: id, pinned: false });

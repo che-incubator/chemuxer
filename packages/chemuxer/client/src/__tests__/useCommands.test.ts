@@ -21,6 +21,7 @@ function mockDeps(overrides: Partial<CommandDeps> = {}): CommandDeps {
     openSettings: vi.fn(),
     createSplitSession: vi.fn(),
     toggleZoom: vi.fn(),
+    containers: [],
     ...overrides,
   };
 }
@@ -222,5 +223,33 @@ describe('useCommands', () => {
     expect(cmd).toBeDefined();
     cmd.action!();
     expect(deps.toggleZoom).toHaveBeenCalled();
+  });
+
+  it('shows container sub-menu when multiple containers exist', () => {
+    const deps = mockDeps({
+      containers: [
+        { name: 'dev', state: 'running', ready: true, isDefault: true },
+        { name: 'tools', state: 'running', ready: true, isDefault: false },
+      ],
+    });
+    const commands = useCommands(deps, DEFAULT_SETTINGS, vi.fn());
+
+    const newTerminal = commands.find(c => c.id === 'new-terminal');
+    expect(newTerminal?.children).toHaveLength(2);
+    expect(newTerminal?.children?.[0].label).toBe('dev (default)');
+    expect(newTerminal?.children?.[1].label).toBe('tools');
+  });
+
+  it('skips sub-menu with single container', () => {
+    const deps = mockDeps({
+      containers: [
+        { name: 'dev', state: 'running', ready: true, isDefault: true },
+      ],
+    });
+    const commands = useCommands(deps, DEFAULT_SETTINGS, vi.fn());
+
+    const newTerminal = commands.find(c => c.id === 'new-terminal');
+    expect(newTerminal?.children).toBeUndefined();
+    expect(newTerminal?.action).toBeDefined();
   });
 });

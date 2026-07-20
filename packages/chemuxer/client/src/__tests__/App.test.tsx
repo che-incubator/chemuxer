@@ -48,6 +48,23 @@ vi.mock('../hooks/useCommands.js', () => ({
   useCommands: () => [],
 }));
 
+vi.mock('../hooks/useDevfileCommands.js', () => ({
+  useDevfileCommands: () => ({
+    commands: [],
+    loading: false,
+    error: null,
+    revalidateIfStale: vi.fn(),
+  }),
+}));
+
+vi.mock('../hooks/useContainers.js', () => ({
+  useContainers: () => ({
+    containers: [],
+    loading: false,
+    revalidateIfStale: vi.fn(),
+  }),
+}));
+
 vi.mock('../components/LayoutRenderer.js', () => ({
   LayoutRenderer: () => null,
 }));
