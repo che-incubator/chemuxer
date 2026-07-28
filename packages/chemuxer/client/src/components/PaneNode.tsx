@@ -25,6 +25,8 @@ interface PaneNodeProps {
   sessions: SessionInfo[];
   wsUrl: string;
   settings: Settings;
+  focusedPaneId?: string | null;
+  paneCount?: number;
   onSelectSession: (paneId: string, sessionId: string) => void;
   onCloseSession: (sessionId: string) => void;
   onCreateSession: () => void;
@@ -50,6 +52,8 @@ export function PaneNode({
   sessions,
   wsUrl,
   settings,
+  focusedPaneId,
+  paneCount,
   onSelectSession,
   onCloseSession,
   onCreateSession,
@@ -125,8 +129,19 @@ export function PaneNode({
     [pane.id, onSplit, onMoveTab, onMoveSettings, onSplitSettings]
   );
 
+  const isFocused = pane.id === focusedPaneId;
+  const isMultiPane = (paneCount !== undefined ? paneCount : 1) > 1;
+  const shouldDim = settings.terminal.dimInactivePanes && isMultiPane && !isFocused;
+  const dimStyle: React.CSSProperties = shouldDim
+    ? { filter: `brightness(${settings.terminal.inactivePaneDimAmount})` }
+    : {};
+
   return (
-    <div className="pane-node" onClick={handleFocus}>
+    <div
+      className={isFocused && isMultiPane ? 'pane-node pane-node-active' : 'pane-node'}
+      style={dimStyle}
+      onClick={handleFocus}
+    >
       <PaneTabBar
         paneId={pane.id}
         entries={pane.entries}

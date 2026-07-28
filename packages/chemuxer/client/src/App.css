@@ -102,6 +102,12 @@ html, body, #root {
   flex-direction: column;
   height: 100%;
   width: 100%;
+  transition: filter 150ms ease;
+}
+
+.pane-node-active {
+  outline: 1px solid var(--ch-blue);
+  outline-offset: -1px;
 }
 
 .pane-terminal-area {
