@@ -65,6 +65,21 @@ claude /mcp
 # Should show: Connected to chemuxer-mcp
 ```
 
+### Alternative: K8s API proxy (no port-forward)
+
+Access the MCP server without port-forwarding. The K8s API server authenticates requests using your kubeconfig credentials:
+
+```bash
+API_SERVER=$(kubectl config view --minify -o jsonpath='{.clusters[0].cluster.server}')
+NAMESPACE=<your-namespace>
+
+claude mcp add --transport http \
+  --header "Authorization: Bearer $(oc whoami -t)" \
+  chemuxer-mcp "$API_SERVER/api/v1/namespaces/$NAMESPACE/services/chemuxer-mcp:3001/proxy/mcp"
+```
+
+No ClusterRole or Route required — the API server handles authentication and proxies to the ClusterIP service. The caller needs `services/proxy` RBAC permission in the target namespace.
+
 ## Local development (stdio)
 
 Run directly from a local checkout — no port-forward needed:
