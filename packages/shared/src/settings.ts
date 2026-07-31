@@ -105,6 +105,8 @@ export interface TerminalSettings {
   fontFamily: string;
   fontSize: number;
   theme: ThemeName;
+  dimInactivePanes: boolean;
+  inactivePaneDimAmount: number;
 }
 
 export interface ShellSettings {
@@ -126,6 +128,8 @@ export const DEFAULT_SETTINGS: Settings = deepFreeze({
     fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', Menlo, monospace",
     fontSize: 14,
     theme: 'catppuccin-mocha',
+    dimInactivePanes: true,
+    inactivePaneDimAmount: 0.7,
   },
   shell: {
     path: '',
@@ -146,6 +150,7 @@ export function clampSettings(settings: Settings): Settings {
       ...settings.terminal,
       fontSize: Math.min(32, Math.max(8, settings.terminal.fontSize)),
       theme: settings.terminal.theme in THEMES ? settings.terminal.theme : DEFAULT_SETTINGS.terminal.theme,
+      inactivePaneDimAmount: Math.min(1.0, Math.max(0.1, settings.terminal.inactivePaneDimAmount)),
     },
     scrollback: {
       ...settings.scrollback,

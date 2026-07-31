@@ -88,7 +88,8 @@ export function App() {
     root.style.setProperty('--ch-subtext0', theme.subtext0);
     root.style.setProperty('--ch-blue', theme.blue);
     root.style.setProperty('--ch-red', theme.red);
-  }, [settings.terminal.theme]);
+    root.style.setProperty('--ch-dim-amount', String(settings.terminal.inactivePaneDimAmount));
+  }, [settings.terminal.theme, settings.terminal.inactivePaneDimAmount]);
 
   const handlePaletteOpenChange = useCallback((open: boolean) => {
     setPaletteOpen(open);
@@ -147,6 +148,7 @@ export function App() {
             wsUrl={WS_BASE}
             settings={settings}
             zoomedPaneId={layout.zoomedPaneId}
+            focusedPaneId={layout.focusedPaneId}
             onSelectSession={layout.setActiveSession}
             onCloseSession={handleCloseSession}
             onCreateSession={control.createSession}
