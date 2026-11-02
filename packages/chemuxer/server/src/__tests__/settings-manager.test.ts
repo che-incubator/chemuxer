@@ -96,4 +96,17 @@ describe('SettingsManager', () => {
     expect(schemaReads).toHaveLength(0);
     spy.mockRestore();
   });
+
+  it('boots with in-memory defaults when the config path cannot be written', () => {
+    fs.writeFileSync(path.join(tmpDir, 'blocker'), 'x');
+    const badPath = path.join(tmpDir, 'blocker', 'settings.json');
+    expect(() => { manager = new SettingsManager(badPath); }).not.toThrow();
+    expect(manager.getSettings().terminal.fontSize).toBe(14);
+  });
+
+  it('writeSettings still throws when the config path is unwritable', () => {
+    fs.writeFileSync(path.join(tmpDir, 'blocker'), 'x');
+    manager = new SettingsManager(path.join(tmpDir, 'blocker', 'settings.json'));
+    expect(() => manager.writeSettings({ terminal: { fontSize: 20 } })).toThrow();
+  });
 });
