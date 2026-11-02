@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
@@ -87,5 +87,13 @@ describe('SettingsManager', () => {
     const themeEnum = schema.properties.terminal.properties.theme.enum;
     expect(themeEnum).toContain('catppuccin-mocha');
     expect(themeEnum).toContain('catppuccin-latte');
+  });
+
+  it('does not read the schema from disk at runtime', () => {
+    const spy = vi.spyOn(fs, 'readFileSync');
+    manager = new SettingsManager(configPath);
+    const schemaReads = spy.mock.calls.filter((args) => String(args[0]).includes('settings-schema.json'));
+    expect(schemaReads).toHaveLength(0);
+    spy.mockRestore();
   });
 });
