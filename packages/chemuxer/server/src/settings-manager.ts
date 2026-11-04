@@ -1,34 +1,31 @@
 import fs from 'fs';
 import path from 'path';
 import { mergeWithDefaults, DEFAULT_SETTINGS, type Settings } from '@chemuxer/shared';
+import settingsSchema from './settings-schema.json';
 
 type ChangeCallback = (settings: Settings) => void;
 
 export class SettingsManager {
   private settings: Settings;
   private configPath: string;
-  private schemaString: string;
+  private schemaString = JSON.stringify(settingsSchema, null, 2);
   private changeListeners: ChangeCallback[] = [];
   private watcher: fs.FSWatcher | null = null;
 
   constructor(configPath: string) {
     this.configPath = configPath;
 
-    const schemaPath = path.resolve(__dirname, 'settings-schema.json');
-    try {
-      this.schemaString = fs.readFileSync(schemaPath, 'utf-8');
-    } catch (e) {
-      console.warn('[SettingsManager] Failed to read settings schema:', e);
-      this.schemaString = '{}';
-    }
-
     const dir = path.dirname(configPath);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
 
     if (!fs.existsSync(configPath)) {
-      fs.writeFileSync(configPath, JSON.stringify(DEFAULT_SETTINGS, null, 2));
+      try {
+        if (!fs.existsSync(dir)) {
+          fs.mkdirSync(dir, { recursive: true });
+        }
+        fs.writeFileSync(configPath, JSON.stringify(DEFAULT_SETTINGS, null, 2));
+      } catch (e) {
+        console.warn('[SettingsManager] Failed to write default settings, using in-memory defaults:', e);
+      }
       this.settings = { ...DEFAULT_SETTINGS };
     } else {
       this.settings = this.readFromDisk();
