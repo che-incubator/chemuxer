@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
@@ -87,5 +87,26 @@ describe('SettingsManager', () => {
     const themeEnum = schema.properties.terminal.properties.theme.enum;
     expect(themeEnum).toContain('catppuccin-mocha');
     expect(themeEnum).toContain('catppuccin-latte');
+  });
+
+  it('does not read the schema from disk at runtime', () => {
+    const spy = vi.spyOn(fs, 'readFileSync');
+    manager = new SettingsManager(configPath);
+    const schemaReads = spy.mock.calls.filter((args) => String(args[0]).includes('settings-schema.json'));
+    expect(schemaReads).toHaveLength(0);
+    spy.mockRestore();
+  });
+
+  it('boots with in-memory defaults when the config path cannot be written', () => {
+    fs.writeFileSync(path.join(tmpDir, 'blocker'), 'x');
+    const badPath = path.join(tmpDir, 'blocker', 'settings.json');
+    expect(() => { manager = new SettingsManager(badPath); }).not.toThrow();
+    expect(manager.getSettings().terminal.fontSize).toBe(14);
+  });
+
+  it('writeSettings still throws when the config path is unwritable', () => {
+    fs.writeFileSync(path.join(tmpDir, 'blocker'), 'x');
+    manager = new SettingsManager(path.join(tmpDir, 'blocker', 'settings.json'));
+    expect(() => manager.writeSettings({ terminal: { fontSize: 20 } })).toThrow();
   });
 });
