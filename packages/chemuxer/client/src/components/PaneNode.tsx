@@ -43,6 +43,7 @@ interface PaneNodeProps {
   renamingSessionId?: string | null;
   onContextSplit?: (sessionId: string, zone: DropZone) => void;
   zoomed?: boolean;
+  defaultContainer?: string;
 }
 
 export function PaneNode({
@@ -68,6 +69,7 @@ export function PaneNode({
   renamingSessionId,
   onContextSplit,
   zoomed,
+  defaultContainer,
 }: PaneNodeProps) {
   const { isDragging, startDrag, endDrag } = useDrag();
   const [hoveredZone, setHoveredZone] = useState<DropZone | null>(null);
@@ -146,6 +148,7 @@ export function PaneNode({
         onRenameConfirm={onRenameConfirm}
         onRenameCancel={onRenameCancel}
         zoomed={zoomed}
+        defaultContainer={defaultContainer}
       />
       <div
         ref={terminalAreaRef}

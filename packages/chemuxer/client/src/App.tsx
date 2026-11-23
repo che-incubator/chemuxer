@@ -5,6 +5,7 @@ import { useLayout } from './hooks/useLayout.js';
 import { useSettings } from './hooks/useSettings.js';
 import { useCommands } from './hooks/useCommands.js';
 import { useDevfileCommands } from './hooks/useDevfileCommands.js';
+import { useContainers } from './hooks/useContainers.js';
 import { LayoutRenderer } from './components/LayoutRenderer.js';
 import { CommandPalette } from './components/CommandPalette.js';
 import { ConnectionBanner } from './components/ConnectionBanner.js';
@@ -28,6 +29,7 @@ export function App() {
   const [pendingClose, setPendingClose] = useState<{ sessionId: string; title: string } | null>(null);
 
   const { commands: devfileCommands, revalidateIfStale } = useDevfileCommands();
+  const { containers, revalidateIfStale: revalidateContainers } = useContainers();
 
   const handleRenameRequest = useCallback((sessionId: string) => {
     setRenamingSessionId(sessionId);
@@ -52,6 +54,7 @@ export function App() {
       openSettings: layout.openSettings,
       toggleZoom: layout.toggleZoom,
       createSplitSession: layout.createSplitSession,
+      containers,
     },
     settings,
     updateSettings,
@@ -94,10 +97,11 @@ export function App() {
     setPaletteOpen(open);
 
     if (open) {
-      // Revalidate devfile commands if cache is stale
+      // Revalidate devfile commands and containers if cache is stale
       revalidateIfStale();
+      revalidateContainers();
     }
-  }, [revalidateIfStale]);
+  }, [revalidateIfStale, revalidateContainers]);
 
   const handleRenameConfirm = useCallback((sessionId: string, title: string) => {
     control.renameSession(sessionId, title);
@@ -135,6 +139,8 @@ export function App() {
     }
   }, []);
 
+  const defaultContainer = containers.find(c => c.isDefault)?.name;
+
   return (
     <DragProvider>
       <div className="app">
@@ -164,6 +170,7 @@ export function App() {
             onRenameCancel={handleRenameCancel}
             renamingSessionId={renamingSessionId}
             onContextSplit={handleContextSplit}
+            defaultContainer={defaultContainer}
           />
         </div>
         <CommandPalette

@@ -25,3 +25,4 @@ export {
 } from './settings.js';
 export type { FeedEntry, FeedResponse } from './feed-types.js';
 export type { DevfileCommand } from './devfile-command.js';
+export type { ContainerInfo, ContainerState } from './container.js';

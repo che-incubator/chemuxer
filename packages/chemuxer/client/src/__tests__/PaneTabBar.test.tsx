@@ -5,8 +5,8 @@ import type { SessionInfo } from '@chemuxer/shared';
 import type { TabEntry } from '../types/layout.js';
 
 const sessions: SessionInfo[] = [
-  { id: 'a', shell: '/bin/bash', title: 'bash', renamed: false, createdAt: 1000 },
-  { id: 'b', shell: '/bin/zsh', title: 'zsh', renamed: false, createdAt: 2000 },
+  { id: 'a', shell: '/bin/bash', title: 'bash', renamed: false, pinned: false, createdAt: 1000, container: '' },
+  { id: 'b', shell: '/bin/zsh', title: 'zsh', renamed: false, pinned: false, createdAt: 2000, container: '' },
 ];
 
 describe('PaneTabBar', () => {
@@ -279,7 +279,7 @@ describe('PaneTabBar', () => {
 
   it('shows custom title without tab number when session is renamed', () => {
     const renamedSessions: SessionInfo[] = [
-      { id: 'a', shell: '/bin/bash', title: 'my server', renamed: true, createdAt: 1000 },
+      { id: 'a', shell: '/bin/bash', title: 'my server', renamed: true, pinned: false, createdAt: 1000, container: '' },
     ];
     const entries: TabEntry[] = [
       { type: 'terminal', sessionId: 'a', tabNumber: 1 },
@@ -572,5 +572,93 @@ describe('PaneTabBar', () => {
     expect(screen.queryByText('Split Left')).toBeNull();
     expect(screen.queryByText('Split Down')).toBeNull();
     expect(screen.queryByText('Split Up')).toBeNull();
+  });
+
+  it('shows container badge for non-default container sessions', () => {
+    const sessionsWithContainers: SessionInfo[] = [
+      { id: 'a', shell: '/bin/bash', title: 'bash', renamed: false, pinned: false, createdAt: 1000, container: 'chemuxer' },
+      { id: 'b', shell: '/bin/zsh', title: 'zsh', renamed: false, pinned: false, createdAt: 2000, container: 'tools' },
+    ];
+    const entries: TabEntry[] = [
+      { type: 'terminal', sessionId: 'a', tabNumber: 1 },
+      { type: 'terminal', sessionId: 'b', tabNumber: 2 },
+    ];
+    const { container } = render(
+      <PaneTabBar
+        paneId="pane-1"
+        entries={entries}
+        activeEntryIndex={0}
+        sessions={sessionsWithContainers}
+        defaultContainer="chemuxer"
+        onSelect={() => {}}
+        onClose={() => {}}
+        onCreate={() => {}}
+        onDragStart={() => {}}
+        onDragEnd={() => {}}
+      />
+    );
+
+    expect(screen.getByText('bash — 1')).toBeTruthy();
+    expect(screen.getByText((content, element) => {
+      return element?.className === 'tab-title' && content.includes('zsh — 2') && content.includes('[tools]');
+    })).toBeTruthy();
+    const bashTab = screen.getByText('bash — 1').closest('.tab-title');
+    expect(bashTab?.textContent).not.toContain('[chemuxer]');
+  });
+
+  it('does not show container badge for default container sessions', () => {
+    const sessionsWithContainers: SessionInfo[] = [
+      { id: 'a', shell: '/bin/bash', title: 'bash', renamed: false, pinned: false, createdAt: 1000, container: 'chemuxer' },
+    ];
+    const entries: TabEntry[] = [
+      { type: 'terminal', sessionId: 'a', tabNumber: 1 },
+    ];
+    render(
+      <PaneTabBar
+        paneId="pane-1"
+        entries={entries}
+        activeEntryIndex={0}
+        sessions={sessionsWithContainers}
+        defaultContainer="chemuxer"
+        onSelect={() => {}}
+        onClose={() => {}}
+        onCreate={() => {}}
+        onDragStart={() => {}}
+        onDragEnd={() => {}}
+      />
+    );
+
+    const bashTab = screen.getByText('bash — 1').closest('.tab-title');
+    expect(bashTab?.textContent).toBe('bash — 1');
+    expect(bashTab?.textContent).not.toContain('[chemuxer]');
+  });
+
+  it('does not show container badge when defaultContainer is not provided', () => {
+    const sessionsWithContainers: SessionInfo[] = [
+      { id: 'a', shell: '/bin/bash', title: 'bash', renamed: false, pinned: false, createdAt: 1000, container: 'chemuxer' },
+      { id: 'b', shell: '/bin/zsh', title: 'zsh', renamed: false, pinned: false, createdAt: 2000, container: 'tools' },
+    ];
+    const entries: TabEntry[] = [
+      { type: 'terminal', sessionId: 'a', tabNumber: 1 },
+      { type: 'terminal', sessionId: 'b', tabNumber: 2 },
+    ];
+    render(
+      <PaneTabBar
+        paneId="pane-1"
+        entries={entries}
+        activeEntryIndex={0}
+        sessions={sessionsWithContainers}
+        onSelect={() => {}}
+        onClose={() => {}}
+        onCreate={() => {}}
+        onDragStart={() => {}}
+        onDragEnd={() => {}}
+      />
+    );
+
+    expect(screen.getByText('bash — 1')).toBeTruthy();
+    expect(screen.getByText('zsh — 2')).toBeTruthy();
+    expect(screen.queryByText('[chemuxer]')).toBeNull();
+    expect(screen.queryByText('[tools]')).toBeNull();
   });
 });

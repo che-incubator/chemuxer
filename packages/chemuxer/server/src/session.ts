@@ -14,7 +14,28 @@ export interface SessionOptions {
 type DataCallback = (data: string) => void;
 type ExitCallback = (exitCode: number | null) => void;
 
-export class Session {
+export interface ISession {
+  readonly id: string;
+  readonly shell: string;
+  readonly container: string;
+  readonly createdAt: number;
+  get title(): string;
+  get pinned(): boolean;
+  get isClosed(): boolean;
+  rename(title: string): void;
+  pin(): void;
+  unpin(): void;
+  getState(): string;
+  write(data: string): void;
+  resize(cols: number, rows: number): void;
+  onData(cb: (data: string) => void): () => void;
+  onExit(cb: (exitCode: number | null) => void): void;
+  close(): void;
+  toInfo(): SessionInfo;
+}
+
+export class Session implements ISession {
+  readonly container: string;
   readonly id: string;
   readonly shell: string;
   private readonly defaultTitle: string;
@@ -30,9 +51,10 @@ export class Session {
   private pendingWrites: number = 0;
   private _pinned: boolean = false;
 
-  constructor(shell: string, options: SessionOptions = {}) {
+  constructor(shell: string, container: string, options: SessionOptions = {}) {
     this.id = crypto.randomUUID();
     this.shell = shell;
+    this.container = container;
     this.defaultTitle = path.basename(shell);
     this.createdAt = Date.now();
 
@@ -161,6 +183,7 @@ export class Session {
       renamed: this.customTitle !== null,
       pinned: this._pinned,
       createdAt: this.createdAt,
+      container: this.container,
     };
   }
 }

@@ -6,6 +6,7 @@ import type { FeedCollector } from './feed-collector.js';
 import { stripAnsi } from './strip-ansi.js';
 import type { ServerControlMessage } from '@chemuxer/shared';
 import { loadDevfileCommands } from './devfile-commands.js';
+import type { ContainerDiscovery } from './container-discovery.js';
 
 const AGENTS_MD = `# Chemuxer — Agent Instructions
 
@@ -102,6 +103,7 @@ export function createApiRouter(
   settingsManager: SettingsManager,
   feedCollector: FeedCollector,
   broadcastControl: (data: ServerControlMessage) => void,
+  discovery: ContainerDiscovery,
 ): Router {
   const router = Router();
 
@@ -146,7 +148,7 @@ export function createApiRouter(
   });
 
   router.post('/api/sessions', (req, res, next) => {
-    const { pinned, devfileCommandId } = req.body || {};
+    const { pinned, devfileCommandId, container } = req.body || {};
 
     // Handle devfile command execution
     if (devfileCommandId) {
@@ -161,7 +163,7 @@ export function createApiRouter(
         }
 
         // Create session
-        const session = manager.createSession();
+        const session = manager.createSession(command.component ? { container: command.component } : undefined);
 
         // Generate title: group: label or task: label
         const prefix = command.group || 'task';
@@ -199,7 +201,7 @@ export function createApiRouter(
     // Regular session creation (existing code path)
     let session;
     try {
-      session = manager.createSession();
+      session = manager.createSession(container ? { container } : undefined);
     } catch (err) {
       if (err instanceof SessionLimitError) {
         res.status(429).json({ error: 'Maximum session limit reached' });
@@ -295,6 +297,12 @@ export function createApiRouter(
   // --- Devfile commands ---
   router.get('/api/devfile-commands', (_req, res) => {
     res.json(loadDevfileCommands());
+  });
+
+  // --- Containers ---
+  router.get('/api/containers', async (_req, res) => {
+    const containers = await discovery.getContainers();
+    res.json(containers);
   });
 
   return router;

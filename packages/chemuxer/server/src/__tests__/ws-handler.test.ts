@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach, beforeEach } from 'vitest';
+import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
 import http from 'http';
 import WebSocket from 'ws';
 import express from 'express';
@@ -37,6 +37,15 @@ function connectControl(server: http.Server): Promise<{ ws: WebSocket; initial: 
   });
 }
 
+function mockDiscovery() {
+  return {
+    getDefaultContainerName: () => 'default-container',
+    getNamespace: () => 'test-namespace',
+    getPodName: () => 'test-pod',
+    getContainers: async () => [],
+  } as any;
+}
+
 describe('WebSocket Handler', { timeout: 30000 }, () => {
   let server: http.Server;
   let manager: SessionManager;
@@ -50,7 +59,7 @@ describe('WebSocket Handler', { timeout: 30000 }, () => {
       writeSettings: () => DEFAULT_SETTINGS,
       writeSettingsRaw: () => DEFAULT_SETTINGS,
     };
-    manager = new SessionManager(mockSettingsManager as any);
+    manager = new SessionManager(mockSettingsManager as any, mockDiscovery());
     const app = express();
     server = http.createServer(app);
     const { broadcastControl } = setupWebSocketServer(server, manager, mockSettingsManager as any);
@@ -354,6 +363,17 @@ describe('WebSocket Handler', { timeout: 30000 }, () => {
 
     // Verify session still exists
     expect(manager.getSession(session.id)).toBeTruthy();
+    ws.close();
+  });
+
+  it('control: passes container field from create message to session manager', async () => {
+    const { ws } = await connectControl(server);
+    const createSpy = vi.spyOn(manager, 'createSession');
+
+    ws.send(JSON.stringify({ type: 'create', container: 'sidecar-tools' }));
+    await waitForMessage(ws); // wait for session-created
+
+    expect(createSpy).toHaveBeenCalledWith({ container: 'sidecar-tools' });
     ws.close();
   });
 });
