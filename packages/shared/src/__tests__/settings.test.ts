@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { resolveTheme, THEMES, DEFAULT_SETTINGS } from '../settings.js';
+import { resolveTheme, THEMES, DEFAULT_SETTINGS, clampSettings, mergeWithDefaults } from '../settings.js';
 
 describe('settings', () => {
   it('resolveTheme returns catppuccin-mocha for known name', () => {
@@ -54,5 +54,29 @@ describe('settings', () => {
 
   it('DEFAULT_SETTINGS has scrollback.lines', () => {
     expect(DEFAULT_SETTINGS.scrollback.lines).toBe(5000);
+  });
+
+  describe('dimming settings', () => {
+    it('DEFAULT_SETTINGS includes dimming fields', () => {
+      expect(DEFAULT_SETTINGS.terminal.dimInactivePanes).toBe(true);
+      expect(DEFAULT_SETTINGS.terminal.inactivePaneDimAmount).toBe(0.7);
+    });
+
+    it('clampSettings clamps inactivePaneDimAmount to [0.1, 1.0]', () => {
+      const tooLow = { ...DEFAULT_SETTINGS, terminal: { ...DEFAULT_SETTINGS.terminal, inactivePaneDimAmount: 0 } };
+      expect(clampSettings(tooLow).terminal.inactivePaneDimAmount).toBe(0.1);
+
+      const tooHigh = { ...DEFAULT_SETTINGS, terminal: { ...DEFAULT_SETTINGS.terminal, inactivePaneDimAmount: 1.5 } };
+      expect(clampSettings(tooHigh).terminal.inactivePaneDimAmount).toBe(1.0);
+
+      const valid = { ...DEFAULT_SETTINGS, terminal: { ...DEFAULT_SETTINGS.terminal, inactivePaneDimAmount: 0.5 } };
+      expect(clampSettings(valid).terminal.inactivePaneDimAmount).toBe(0.5);
+    });
+
+    it('mergeWithDefaults fills dimming fields from defaults', () => {
+      const merged = mergeWithDefaults({});
+      expect(merged.terminal.dimInactivePanes).toBe(true);
+      expect(merged.terminal.inactivePaneDimAmount).toBe(0.7);
+    });
   });
 });

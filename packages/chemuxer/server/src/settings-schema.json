@@ -24,6 +24,18 @@
           "description": "Terminal color theme",
           "enum": ["catppuccin-mocha", "catppuccin-latte"],
           "default": "catppuccin-mocha"
+        },
+        "dimInactivePanes": {
+          "type": "boolean",
+          "description": "Dim inactive split panes to highlight the focused pane",
+          "default": true
+        },
+        "inactivePaneDimAmount": {
+          "type": "number",
+          "description": "Brightness multiplier for inactive panes (0.1 = very dim, 1.0 = no dimming)",
+          "minimum": 0.1,
+          "maximum": 1.0,
+          "default": 0.7
         }
       },
       "additionalProperties": false
